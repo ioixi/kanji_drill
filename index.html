@@ -216,15 +216,16 @@
             margin-bottom: 10px;
         }
         .btn-small {
-            padding: 6px 12px;
+            padding: 8px 12px;
             font-size: 0.85rem;
-            border-radius: 6px;
-            width: auto;
+            border-radius: 8px;
+            width: 100%;
             margin-bottom: 0;
             background: #3a3a44;
             color: var(--text-main);
             border: 1px solid #555;
             cursor: pointer;
+            line-height: 1.4;
         }
 
         .nested-checkbox-area {
@@ -359,17 +360,17 @@
         </div>
 
         <div class="form-group">
-            <label>📖 練習（れんしゅう）する 教材（きょうざい）</label>
+            <label>📖 練習する教材</label>
             <select id="textbook-select" onchange="updateRangeUI()">
                 <option value="">データを よみこんでください</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label>🎯 練習（れんしゅう）する 課・セクション（ピンポイント選択）</label>
+            <label>🎯 練習する課・セクション</label>
             <div class="select-toggle-area">
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択（ぜんせんたく）</button>
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除（ぜんかいじょ）</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択<br>(ぜんせんたく)</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除<br>(ぜんかいじょ)</button>
             </div>
             <div id="nested-checkbox-area" class="nested-checkbox-area">
                 <span style="color:#666; font-size:0.9rem;">データを よみこむまで お待ちください</span>
@@ -535,6 +536,9 @@
 
         function toggleTeacherMode(enabled) {
             isTeacherMode = enabled;
+            const switchEl = document.getElementById('global-teacher-switch');
+            if (switchEl) switchEl.checked = enabled;
+
             if (enabled) {
                 document.body.classList.add('teacher-mode-active');
             } else {
@@ -564,7 +568,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // 💡 共通のワークブック解析処理
         function processWorkbook(workbook) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
@@ -728,8 +731,9 @@
             if (isMuted) return;
             const audio = document.getElementById(audioId);
             if (audio) {
+                audio.prevTime = 0; 
                 audio.currentTime = 0;
-                audio.play().catch(()=>{});
+                audio.play().catch((e)=>{ console.warn("Audio play blocked:", e); });
             }
         }
 
@@ -1243,7 +1247,6 @@
 
         // 🚀 アプリ起動時の初期化（Excel自動読み込み機能）
         window.addEventListener('DOMContentLoaded', () => {
-            // 最初は通常のスマホ（生徒用）スキンでセットアップ
             toggleTeacherMode(false);
             backToSetup();
 
@@ -1261,7 +1264,6 @@
                     console.log('kanji.xlsx を自動的に読み込みました。');
                 })
                 .catch(error => {
-                    // kanji.xlsx が配置されていない場合は、手動でファイル選択できるよう警告を残すのみとする
                     console.warn(error.message);
                 });
         });

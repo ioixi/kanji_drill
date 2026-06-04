@@ -169,6 +169,19 @@
             align-items: center;
             transition: background 0.2s, border 0.2s;
         }
+        
+        /* ⬇️ 【追加】学生モードのときはファイル選択エリアを完全に非表示にする */
+        #excel-file-picker,
+        #file-status-text {
+            display: none !important;
+        }
+
+        /* ⬇️ 【追加】教師モード（チェックボックスON）のときだけ、ファイル選択エリアを復活させる */
+        body.teacher-mode-active #excel-file-picker,
+        body.teacher-mode-active #file-status-text {
+            display: block !important;
+        }
+
         .form-group {
             background: var(--card-bg);
             padding: 15px;

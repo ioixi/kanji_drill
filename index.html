@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>漢字ドリル - v1.0.0</title>
-    <meta name="apple-mobile-web-app-title" content="漢字ドリル"> <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="漢字ドリル">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png"> <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -68,6 +70,16 @@
             body.teacher-mode-active .card {
                 width: 100% !important; 
             }
+        }
+
+        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
+        #excel-file-picker {
+            display: none !important;
+        }
+        /* 🔓 教師モード（ON時）だけ、ファイル選択ボタンを画面に出現させる */
+        body.teacher-mode-active #excel-file-picker {
+            display: inline-block !important;
+            margin-top: 5px !important;
         }
 
         body { 
@@ -169,19 +181,6 @@
             align-items: center;
             transition: background 0.2s, border 0.2s;
         }
-        
-        /* ⬇️ 【追加】学生モードのときはファイル選択エリアを完全に非表示にする */
-        #excel-file-picker,
-        #file-status-text {
-            display: none !important;
-        }
-
-        /* ⬇️ 【追加】教師モード（チェックボックスON）のときだけ、ファイル選択エリアを復活させる */
-        body.teacher-mode-active #excel-file-picker,
-        body.teacher-mode-active #file-status-text {
-            display: block !important;
-        }
-
         .form-group {
             background: var(--card-bg);
             padding: 15px;
@@ -307,9 +306,9 @@
         .btn-mark { display: block; font-size: 1.4rem; }
 
         .teacher-control-container {
-            display: flex;
-            gap: 12px;
-            width: 100%;
+            display: flex; 
+            gap: 12px; 
+            width: 100%; 
             box-sizing: border-box;
         }
         
@@ -498,7 +497,7 @@
 
     <script>
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["はち","よう","打","や"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["hachii","you","da","ya"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -1123,6 +1122,7 @@
                     studentJudgeBtns.classList.add('hidden');
                     studentNextBtn.classList.add('hidden');
                 } else {
+                    showAnswerBtn.mathbf = "none";
                     showAnswerBtn.classList.add('hidden');
                     studentJudgeBtns.classList.remove('hidden');
                     studentNextBtn.classList.add('hidden');

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>漢字ドリル - v1.0.0</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link class="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-bg: #1e1e24;
+            --text-main: #f5f5f7;
+            --text-sub: #b3b3b8;
+            --primary: #00aaff;
+            --correct: #2e7d32;
+            --incorrect: #c62828;
+            --accent: #deff9a;
+            --card-font-size: 2.8rem;
+        }
+
+        /* 👑 教師モード（プロジェクター投影用）の超高コントラスト・巨大化スキン */
+        body.teacher-mode-active {
+            --bg-color: #000000 !important;
+            --card-bg: #000000 !important;
+            --text-main: #ffffff !important;
+            --text-sub: #aaaaaa !important;
+            --primary: #00bbff !important;
+            --accent: #ffff00 !important; 
+            --card-font-size: 5.0rem !important; 
+        }
+        body.teacher-mode-active .card {
+            border: 3px dashed #555 !important;
+            box-shadow: none !important;
+        }
+        body.teacher-mode-active #display-word-area rt {
+            font-size: 1.5rem !important; 
+        }
+
+        /* 1. 通常（学生）モードのメイン操作ボタンだけを肉厚にする */
+        #action-area button {
+            padding: 24px 16px !important;
+            border-radius: 14px !important;
+        }
+
+        /* 2. 教師モードのメイン操作ボタンだけをさらに肉厚にする */
+        body.teacher-mode-active #action-area button {
+            padding: 28px 16px !important;
+        }
+
+        /* 2. カードの縦幅を最初から「答えの分」まで大きく広げて固定する */
+        body.teacher-mode-active .card {
+            min-height: 360px !important;
+            justify-content: flex-start !important; 
+            padding-top: 60px !important;           
+        }
+
+        /* タブレット横持ち（横画面）の時は、縦幅（360px）を維持したまま、横幅だけを画面いっぱいに広げる */
+        @media (orientation: landscape) {
+            body.teacher-mode-active #setup-screen, 
+            body.teacher-mode-active #drill-screen, 
+            body.teacher-mode-active #result-screen {
+                max-width: 95% !important; 
+            }
+            body.teacher-mode-active .card {
+                width: 100% !important; 
+            }
+        }
+
+        body { 
+            font-family: "UD Digi Kyokasho NK-B", "UD デジタル教科書体 NK-B", "UD Digi Kyokasho N-B", "UD デジタル教科書体 N-B", "UD Digi Kyokasho NK-R", "UD デジタル教科書体 NK-R", "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Helvetica Neue", Arial, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 15px;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        #setup-screen, #drill-screen, #result-screen { 
+            width: 100%; 
+            max-width: 600px; 
+            margin-top: 10px; 
+            text-align: center; 
+            position: relative; 
+            box-sizing: border-box;
+        }
+        .hidden { display: none !important; }
+
+        /* モード切替グローバルスイッチ */
+        .mode-toggle-header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+        .teacher-switch-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            background: rgba(255,255,255,0.06);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            user-select: none;
+        }
+        .teacher-switch-label input { transform: scale(1.1); cursor: pointer; }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        .score-info {
+            display: flex;
+            gap: 10px;
+            font-size: 0.85rem;
+            flex-wrap: nowrap; 
+            white-space: nowrap;
+        }
+        .score-item { color: var(--text-main); }
+        .score-num { font-weight: bold; color: var(--accent); }
+
+        .mute-btn {
+            background: #2a2a32;
+            color: var(--text-main);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            width: auto;
+            margin-bottom: 0;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0; 
+        }
+        .mute-btn.is-muted {
+            background: var(--incorrect);
+            border-color: var(--incorrect);
+            color: #fff;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px 15px 20px 15px; 
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            min-height: 280px !important;       
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start !important; 
+            align-items: center;
+            transition: background 0.2s, border 0.2s;
+        }
+        .form-group {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--text-sub); font-size: 0.95rem; }
+        select {
+            width: 100%; padding: 12px; background: #2a2a32; border: 1px solid #444; 
+            color: #fff; border-radius: 8px; font-size: 1rem; box-sizing: border-box;
+            font-family: sans-serif;
+        }
+        
+        .switch-container {
+            display: flex;
+            background: #2a2a32;
+            border: 1px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .switch-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            color: var(--text-sub);
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 0;
+            margin-bottom: 0;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .switch-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .select-toggle-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            width: auto;
+            margin-bottom: 0;
+            background: #3a3a44;
+            color: var(--text-main);
+            border: 1px solid #555;
+            cursor: pointer;
+        }
+
+        .nested-checkbox-area {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #2a2a32;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .parent-group { margin-bottom: 12px; }
+        .parent-label {
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+        .child-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-left: 22px;
+            margin-top: 4px;
+        }
+        .child-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 0.95rem;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        .child-label input, .parent-label input { transform: scale(1.1); }
+
+        button {
+            width: 100%; padding: 16px ; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 1.15rem; 
+            font-weight: bold; cursor: pointer; 
+            transition: transform 0.1s, opacity 0.2s; margin-bottom: 12px;
+            font-family: sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--correct); color: white; }
+        .btn-danger { background: var(--incorrect); color: white; }
+        .btn-secondary { background: #444; color: #ccc; }
+
+        .judge-container { 
+            display: flex; 
+            gap: 12px; 
+            width: 100%; 
+            box-sizing: border-box;
+        }
+        .btn-label { display: block; font-size: 0.95rem; font-weight: normal; margin-bottom: 4px; }
+        .btn-mark { display: block; font-size: 1.4rem; }
+
+        .teacher-control-container {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        #display-target-info { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; font-family: sans-serif; color: var(--text-sub); }
+        .arrow-accent { color: var(--accent); }
+
+        #display-word-area { 
+            font-size: var(--card-font-size); 
+            font-weight: bold; 
+            color: var(--text-main); 
+            margin: 10px 0;
+            line-height: 1.8;
+            letter-spacing: 0px !important; 
+            word-break: break-all;
+            display: inline-block;
+            transition: font-size 0.2s;
+        }
+        #display-word-area ruby {
+            ruby-position: over;
+            ruby-align: center;
+        }
+        #display-word-area rt { 
+            font-size: 1.0rem; 
+            font-weight: bold; 
+            letter-spacing: 0px !important;
+            padding-bottom: 2px; 
+            color: var(--text-sub);
+            user-select: none;
+        }
+        #display-word-area rt.target-blind {
+            color: transparent !important;
+            background: transparent !important;
+            user-select: none;
+        }
+        
+        #display-answer-block { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #444; width: 100%; }
+        #display-answer-word { font-size: 2.8rem; font-weight: bold; color: #ffeb3b; line-height: 1.5; letter-spacing: 0.02em; word-break: break-all; }
+        body.teacher-mode-active #display-answer-word { font-size: 4.0rem !important; color: #ffff00 !important; }
+
+        .file-status { font-size: 0.9rem; color: #888; margin-top: 5px; text-align: center; font-family: sans-serif; font-weight: bold; }
+        #wrong-list-area { width: 100%; height: 120px; background: #2a2a32; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 0.9rem; margin-bottom: 10px; text-align: left; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+
+    <div class="mode-toggle-header">
+        <label class="teacher-switch-label">
+            <input type="checkbox" id="global-teacher-switch" onchange="toggleTeacherMode(this.checked)">
+            👨‍🏫 教師モード (プロジェクター用)
+        </label>
+    </div>
+
+    <div id="setup-screen">
+        <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-family: sans-serif;">漢字ドリル</h2>
+        <p style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 25px; font-family: sans-serif;">よみかたの れんしゅう アプリ</p>
+        
+        <div class="form-group" style="text-align: center; padding: 15px;">
+            <input type="file" id="excel-file-picker" accept=".xlsx, .xls" style="font-size: 10pt; color: #fff; margin-bottom: 10px;">
+            <div id="file-status-text" class="file-status" style="color: #ffb74d;">📅 エクセルファイルを えらんでください</div>
+        </div>
+
+        <div class="form-group">
+            <label>📖 練習（れんしゅう）する 教材（きょうざい）</label>
+            <select id="textbook-select" onchange="updateRangeUI()">
+                <option value="">データを よみこんでください</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>🎯 練習（れんしゅう）する 課・セクション（ピンポイント選択）</label>
+            <div class="select-toggle-area">
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択（ぜんせんたく）</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除（ぜんかいじょ）</button>
+            </div>
+            <div id="nested-checkbox-area" class="nested-checkbox-area">
+                <span style="color:#666; font-size:0.9rem;">データを よみこむまで お待ちください</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>🔰 未習（みしゅう）漢字の ルビ</label>
+            <div class="switch-container">
+                <button type="button" id="ruby-on-btn" class="switch-btn active" onclick="setRubyMode(true)">ある</button>
+                <button type="button" id="ruby-off-btn" class="switch-btn" onclick="setRubyMode(false)">ない</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>🔀 出題（しゅつだい）の 順番（じゅんばん）</label>
+            <div class="switch-container">
+                <button type="button" id="order-seq-btn" class="switch-btn active" onclick="setOrderMode(false)">順番どおり</button>
+                <button type="button" id="order-rand-btn" class="switch-btn" onclick="setOrderMode(true)">ランダム</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>❓ 問題（もんだい）の かず</label>
+            <select id="question-count-select">
+                <option value="5">5問</option>
+                <option value="10" selected>10問</option>
+                <option value="20">20問</option>
+                <option value="30">30問</option>
+                <option value="all">全問（ぜんもん）</option>
+            </select>
+        </div>
+
+        <button id="start-btn" class="btn-primary" disabled style="margin-top: 15px; opacity: 0.5;">はじめる</button>
+    </div>
+
+    <div id="drill-screen" class="hidden">
+        <div class="score-board" id="student-score-board">
+            <div class="score-info">
+                <div class="score-item">問題:<span id="score-current-idx" class="score-num">0</span>/<span id="score-max-questions" class="score-num">0</span></div>
+                <div class="score-item">できた:<span id="score-correct" class="score-num">0</span></div>
+                <div class="score-item">連勝:<span id="score-combo" class="score-num">0</span></div>
+            </div>
+            <button id="mute-btn-drill" class="mute-btn" onclick="toggleMute()">🔊 音:ON</button>
+        </div>
+
+        <div class="card">
+            <div id="display-target-info">
+                <span class="arrow-accent">➔</span> <span id="instruction-content">【 Loading 】</span>
+            </div>
+            
+            <div id="display-word-area"></div>
+            
+            <div id="display-answer-block" class="hidden">
+                <div id="display-answer-word"></div>
+            </div>
+        </div>
+
+        <div id="action-area">
+            <button id="show-answer-btn" class="btn-primary">こたえを みる</button>
+
+            <div id="student-judge-btns" class="judge-container hidden">
+                <button id="btn-wrong" class="btn-danger" onclick="handleStudentJudge(false)">
+                    <span class="btn-label">できなかった</span>
+                    <span class="btn-mark">❌</span>
+                </button>
+                <button id="btn-right" class="btn-success" onclick="handleStudentJudge(true)">
+                    <span class="btn-label">できた</span>
+                    <span class="btn-mark">⭕</span>
+                </button>
+            </div>
+            <button id="student-next-btn" class="btn-primary hidden" onclick="nextQuestion()">つぎへ ➔</button>
+
+            <div id="teacher-control-btns" class="teacher-control-container hidden">
+                <button id="btn-teacher-back" class="btn-secondary" style="flex: 1;" onclick="handleTeacherBack()">◀ もどる</button>
+                <button id="btn-teacher-next" class="btn-primary" style="flex: 2;" onclick="handleTeacherNext()">つぎへ ▶</button>
+            </div>
+        </div>
+
+        <button onclick="backToSetup()" class="btn-secondary" style="margin-top: 10px; padding: 10px; font-size: 0.9rem;">やめる</button>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <div style="text-align: right; margin-bottom: 10px;">
+            <button id="mute-btn-result" class="mute-btn" onclick="toggleMute()">🔊 音:ON</button>
+        </div>
+        
+        <div class="card">
+            <h2 style="color: var(--accent); margin-top: 0; font-family: sans-serif;">おわりました！🎉</h2>
+            <p style="font-size: 1.4rem; margin: 20px 0; font-family: sans-serif;">あなたの てんすう: <span id="result-score" style="font-weight: bold; color: #fff; font-size: 2rem;">0</span></p>
+            <p id="result-comment" style="color: #aaa;"></p>
+        </div>
+
+        <div id="retry-wrong-container" class="form-group hidden" style="border-color: var(--incorrect);">
+            <label style="color: #ff8a80;">🔁 苦手（にがて）なところを クリアしましょう！</label>
+            <button onclick="startRetryWrongMode()" class="btn-danger" style="margin-bottom:0;">まちがえた 問題を もう一度 やる</button>
+        </div>
+
+        <div id="wrong-list-container" class="form-group hidden">
+            <label>📝 まちがえた 問題の リスト</label>
+            <textarea id="wrong-list-area" readonly></textarea>
+            <button id="copy-wrong-btn" class="btn-primary" style="padding: 10px; font-size: 1rem;">まちがえた 問題を コピーする</button>
+        </div>
+
+        <button onclick="backToSetup()" class="btn-success">もう一度 最初（さいしょ）から やる</button>
+    </div>
+
+    <audio id="audio-correct" src="se/correct.mp3" preload="auto"></audio>
+    <audio id="audio-incorrect" src="se/incorrect.mp3" preload="auto"></audio>
+    <audio id="audio-perfect" src="se/perfect.mp3" preload="auto"></audio>
+    <audio id="audio-good" src="se/good.mp3" preload="auto"></audio>
+    <audio id="audio-cheer" src="se/cheer.mp3" preload="auto"></audio>
+
+    <script>
+        let KANJI_MINI_DICT = {
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["はち","よう","打","や"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
+        };
+
+        const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
+
+        async function loadFullDictionary() {
+            try {
+                const response = await fetch(DICT_URL);
+                if (!response.ok) throw new Error();
+                const fullData = await response.json();
+                
+                for (let kanji in fullData) {
+                    let readings = [];
+                    if (fullData[kanji].onyomi) readings = readings.concat(fullData[kanji].onyomi.map(r => r.replace("-", "")));
+                    if (fullData[kanji].kunyomi) readings = readings.concat(fullData[kanji].kunyomi.map(r => r.replace("-", "").split(".")[0]));
+                    
+                    readings = readings.filter(r => /^[\u3040-\u309F]+$/.test(r));
+                    readings = [...new Set(readings)].sort((a, b) => b.length - a.length);
+                    
+                    if (readings.length > 0) {
+                        KANJI_MINI_DICT[kanji] = readings;
+                    }
+                }
+                console.log("✓ 常用漢字2,136字の完全データベースと同期しました。");
+            } catch (e) {
+                console.warn("✕ 外部辞書の同期に失敗しました。内蔵辞書で動作します。");
+            }
+        }
+        loadFullDictionary();
+
+        let allData = [];         
+        let activePool = [];      
+        let currentQuestion = null;
+        let maxQuestions = 10;
+        let currentIdx = 0;
+
+        let correctCount = 0;
+        let comboCount = 0;
+        let wrongObjectsPool = []; 
+        let wrongListText = [];
+
+        let textbookKanjiMap = {};
+
+        let isRubyEnabled = true; 
+        let isShuffleEnabled = false; 
+        let isMuted = false;
+        let isTeacherMode = false; 
+
+        function toggleTeacherMode(enabled) {
+            isTeacherMode = enabled;
+            if (enabled) {
+                document.body.classList.add('teacher-mode-active');
+            } else {
+                document.body.classList.remove('teacher-mode-active');
+            }
+            if (!document.getElementById('drill-screen').classList.contains('hidden')) {
+                const answerVisible = !document.getElementById('display-answer-block').classList.contains('hidden');
+                updateControlButtonsVisibility(answerVisible);
+            }
+        }
+
+        document.getElementById('excel-file-picker').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    processWorkbook(workbook);
+                } catch (err) {
+                    console.error(err);
+                    showFileStatus(false, "ファイルの よみこみに 失敗しました。");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 💡 共通のワークブック解析処理
+        function processWorkbook(workbook) {
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            allData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (allData.length > 0) {
+                analyzeExcelStructure();
+                buildTextbookKanjiMap(); 
+                showFileStatus(true, "準備（じゅんび）が できました！");
+            } else {
+                showFileStatus(false, "データが 空っぽです");
+            }
+        }
+
+        function showFileStatus(success, message = "") {
+            const statusText = document.getElementById('file-status-text');
+            const startBtn = document.getElementById('start-btn');
+            if (success) {
+                statusText.innerText = "✓ " + message;
+                statusText.style.color = "#deff9a";
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+            } else {
+                statusText.innerText = "✕ " + message;
+                statusText.style.color = "#c62828";
+                startBtn.disabled = true;
+                startBtn.style.opacity = "0.5";
+            }
+        }
+
+        function buildTextbookKanjiMap() {
+            textbookKanjiMap = {};
+            allData.forEach(row => {
+                const tb = row['教材名'];
+                const lsn = parseInt(row['課']);
+                const sec = parseInt(row['セクション']) || 0;
+                const targetKanjiStr = String(row['学習漢字'] || "").trim();
+
+                if (!tb || isNaN(lsn) || !targetKanjiStr) return;
+
+                const progressScore = (lsn * 100) + sec; 
+
+                if (!textbookKanjiMap[tb]) {
+                    textbookKanjiMap[tb] = {};
+                }
+
+                for (let char of targetKanjiStr) {
+                    if (!textbookKanjiMap[tb][char] || progressScore < textbookKanjiMap[tb][char]) {
+                        textbookKanjiMap[tb][char] = progressScore;
+                    }
+                }
+            });
+        }
+
+        function analyzeExcelStructure() {
+            const textbookSelect = document.getElementById('textbook-select');
+            textbookSelect.innerHTML = "";
+            const textbooks = [...new Set(allData.map(row => row['教材名']))].filter(Boolean);
+            textbooks.forEach(tb => {
+                const opt = document.createElement('option');
+                opt.value = tb;
+                opt.innerText = tb;
+                textbookSelect.appendChild(opt);
+            });
+            updateRangeUI();
+        }
+
+        function updateRangeUI() {
+            const currentTB = document.getElementById('textbook-select').value;
+            const container = document.getElementById('nested-checkbox-area');
+            container.innerHTML = "";
+
+            if (!currentTB) return;
+
+            const filteredRows = allData.filter(row => row['教材名'] === currentTB);
+
+            let structureMap = {};
+            filteredRows.forEach(row => {
+                const lsn = parseInt(row['課']);
+                const sec = parseInt(row['セクション']) || 0;
+                if (isNaN(lsn)) return;
+
+                if (!structureMap[lsn]) {
+                    structureMap[lsn] = new Set();
+                }
+                structureMap[lsn].add(sec);
+            });
+
+            const sortedLessons = Object.keys(structureMap).sort((a, b) => a - b);
+            sortedLessons.forEach(lsn => {
+                const parentBox = document.createElement('div');
+                parentBox.className = "parent-group";
+
+                const pLabel = document.createElement('label');
+                pLabel.className = "parent-label";
+                pLabel.innerHTML = `<input type="checkbox" class="parent-cb" data-lesson="${lsn}" checked onchange="toggleParentSection(${lsn}, this)"> ${lsn}課`;
+                parentBox.appendChild(pLabel);
+
+                const childContainer = document.createElement('div');
+                childContainer.className = "child-container";
+                childContainer.id = `child-container-${lsn}`;
+
+                const sortedSections = Array.from(structureMap[lsn]).sort((a, b) => a - b);
+                sortedSections.forEach(sec => {
+                    const cLabel = document.createElement('label');
+                    cLabel.className = "child-label";
+                    cLabel.innerHTML = `<input type="checkbox" name="section-cb" data-lesson="${lsn}" data-section="${sec}" value="${lsn}-${sec}" checked onchange="checkParentState(${lsn})"> ${lsn}-${sec}`;
+                    childContainer.appendChild(cLabel);
+                });
+
+                parentBox.appendChild(childContainer);
+                container.appendChild(parentBox);
+            });
+        }
+
+        function toggleParentSection(lsn, parentCb) {
+            const children = document.querySelectorAll(`#child-container-${lsn} input[type="checkbox"]`);
+            children.forEach(cb => { cb.checked = parentCb.checked; });
+        }
+
+        function checkParentState(lsn) {
+            const parent = document.querySelector(`.parent-cb[data-lesson="${lsn}"]`);
+            const children = document.querySelectorAll(`#child-container-${lsn} input[type="checkbox"]`);
+            const checkedChildren = document.querySelectorAll(`#child-container-${lsn} input[type="checkbox"]:checked`);
+
+            if (!parent) return;
+            if (checkedChildren.length === 0) {
+                parent.checked = false;
+                parent.indeterminate = false;
+            } else if (checkedChildren.length === children.length) {
+                parent.checked = true;
+                parent.indeterminate = false;
+            } else {
+                parent.checked = false;
+                parent.indeterminate = true; 
+            }
+        }
+
+        function toggleAllCheckboxes(checked) {
+            const allCbs = document.querySelectorAll('#nested-checkbox-area input[type="checkbox"]');
+            allCbs.forEach(cb => {
+                cb.checked = checked;
+                cb.indeterminate = false;
+            });
+        }
+
+        function setRubyMode(enabled) {
+            isRubyEnabled = enabled;
+            document.getElementById('ruby-on-btn').classList.toggle('active', enabled);
+            document.getElementById('ruby-off-btn').classList.toggle('active', !enabled);
+        }
+
+        function setOrderMode(shuffle) {
+            isShuffleEnabled = shuffle;
+            document.getElementById('order-rand-btn').classList.toggle('active', shuffle);
+            document.getElementById('order-seq-btn').classList.toggle('active', !shuffle);
+        }
+
+        function playSound(audioId) {
+            if (isMuted) return;
+            const audio = document.getElementById(audioId);
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(()=>{});
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btnDrill = document.getElementById('mute-btn-drill');
+            const btnResult = document.getElementById('mute-btn-result');
+            const text = isMuted ? "🔈 音:OFF" : "🔊 音:ON";
+            
+            btnDrill.innerText = text;
+            btnDrill.classList.toggle('is-muted', isMuted);
+            btnResult.innerText = text;
+            btnResult.classList.toggle('is-muted', isMuted);
+        }
+
+        document.getElementById('start-btn').addEventListener('click', buildDrillPool);
+
+        function buildDrillPool() {
+            const currentTB = document.getElementById('textbook-select').value;
+            const checkedCbs = document.querySelectorAll('input[name="section-cb"]:checked');
+            
+            if (checkedCbs.length === 0) {
+                alert("どれか1つ 課・セクションを えらんでください。");
+                return;
+            }
+
+            let targetSet = new Set();
+            checkedCbs.forEach(cb => targetSet.add(cb.value));
+
+            let maxSelectedScore = 0;
+            checkedCbs.forEach(cb => {
+                const lsn = parseInt(cb.getAttribute('data-lesson'));
+                const sec = parseInt(cb.getAttribute('data-section')) || 0;
+                const score = (lsn * 100) + sec;
+                if (score > maxSelectedScore) maxSelectedScore = score;
+            });
+
+            let filteredRows = allData.filter(row => {
+                if (row['教材名'] !== currentTB) return false;
+                const key = `${row['課']}-${row['セクション']}`;
+                return targetSet.has(key);
+            });
+
+            if (filteredRows.length === 0) {
+                alert("えらんだ 条件（じょうけん）に あう 漢字が ありません。");
+                return;
+            }
+
+            activePool = filteredRows.map(row => {
+                return {
+                    kanjiData: row,
+                    maxSelectedScore: maxSelectedScore 
+                };
+            });
+
+            if (isShuffleEnabled) {
+                activePool.sort(() => Math.random() - 0.5);
+            } else {
+                activePool.sort((a, b) => {
+                    if (a.kanjiData['課'] !== b.kanjiData['課']) {
+                        return a.kanjiData['課'] - b.kanjiData['課'];
+                    }
+                    return a.kanjiData['セクション'] - b.kanjiData['セクション'];
+                });
+            }
+
+            const countSelect = document.getElementById('question-count-select').value;
+            if (countSelect === 'all') {
+                maxQuestions = activePool.length;
+            } else {
+                maxQuestions = Math.min(parseInt(countSelect), activePool.length);
+            }
+
+            initDrillSession();
+        }
+
+        function initDrillSession() {
+            currentIdx = 0;
+            correctCount = 0;
+            comboCount = 0;
+            wrongObjectsPool = [];
+            wrongListText = [];
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('drill-screen').classList.remove('hidden');
+
+            nextQuestion();
+        }
+
+        function startRetryWrongMode() {
+            activePool = [...wrongObjectsPool];
+            if (isShuffleEnabled) {
+                activePool.sort(() => Math.random() - 0.5);
+            }
+            maxQuestions = activePool.length;
+
+            initDrillSession();
+        }
+
+        function buildDynamicRuby(kanjiStr, rawHiraStr, progReadStr, targetKanji, textbookName, exceptionReadStr) {
+            if (!kanjiStr) return "";
+            kanjiStr = String(kanjiStr).trim();
+            rawHiraStr = String(rawHiraStr).trim();
+            progReadStr = String(progReadStr || "").trim();
+            targetKanji = String(targetKanji || "").trim();
+            exceptionReadStr = String(exceptionReadStr || "").trim();
+            
+            if (!isRubyEnabled || kanjiStr === rawHiraStr) return kanjiStr;
+
+            if (exceptionReadStr) {
+                const pieces = exceptionReadStr.split('/');
+                if (pieces.length === kanjiStr.length) {
+                    let finalHtml = "";
+                    for (let i = 0; i < kanjiStr.length; i++) {
+                        const char = kanjiStr[i];
+                        const rText = pieces[i];
+
+                        if (/[\u3040-\u309F\u30A0-\u30FFー〜0-9０-９]/.test(char)) {
+                            finalHtml += char;
+                        } 
+                        else if (targetKanji.includes(char)) {
+                            finalHtml += `<ruby>${char}<rt class="target-blind">${rText}</rt></ruby>`;
+                        } 
+                        else {
+                            const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
+                            const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
+
+                            if (isUnlearned && rText && rText !== "　") {
+                                finalHtml += `<ruby>${char}<rt>${rText}</rt></ruby>`;
+                            } else {
+                                finalHtml += char;
+                            }
+                        }
+                    }
+                    return finalHtml;
+                }
+            }
+
+            const targetReadings = progReadStr ? progReadStr.split('/') : [];
+            let assignment = []; 
+            let hiraIdx = 0;
+            let targetIdx = 0;
+            let isScanSuccess = true;
+
+            for (let i = 0; i < kanjiStr.length; i++) {
+                const char = kanjiStr[i];
+
+                if (/[0-9０-９]/.test(char)) {
+                    assignment.push({ char: char, reading: "", type: "number" });
+                    let nextNormalChar = kanjiStr[i + 1] || "";
+                    let numChunkLen = 1;
+
+                    if (nextNormalChar) {
+                        if (/[\u3040-\u309F\u30A0-\u30FFー〜]/.test(nextNormalChar)) {
+                            let nextPos = rawHiraStr.indexOf(nextNormalChar, hiraIdx);
+                            if (nextPos !== -1) numChunkLen = nextPos - hiraIdx;
+                        } else if (targetKanji.includes(nextNormalChar)) {
+                            let nextTR = targetReadings[targetIdx] || "";
+                            if (nextTR) {
+                                let nextPos = rawHiraStr.indexOf(nextTR, hiraIdx);
+                                if (nextPos !== -1) numChunkLen = nextPos - hiraIdx;
+                            }
+                        } else {
+                            const nextDict = KANJI_MINI_DICT[nextNormalChar] || [];
+                            for (let nr of nextDict) {
+                                let nextPos = rawHiraStr.indexOf(nr, hiraIdx + 1);
+                                if (nextPos !== -1) {
+                                    numChunkLen = nextPos - hiraIdx;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        numChunkLen = rawHiraStr.length - hiraIdx;
+                    }
+
+                    if (numChunkLen < 1) numChunkLen = 1;
+                    hiraIdx += numChunkLen;
+                    continue;
+                }
+
+                if (/[\u3040-\u309F\u30A0-\u30FFー〜]/.test(char)) {
+                    if (rawHiraStr.charAt(hiraIdx) === char) {
+                        assignment.push({ char: char, reading: "", type: "kana" });
+                        hiraIdx++;
+                    } else {
+                        isScanSuccess = false;
+                    }
+                    continue;
+                }
+
+                if (targetKanji.includes(char)) {
+                    const tReading = targetReadings[targetIdx] || "";
+                    targetIdx++;
+
+                    assignment.push({ char: char, reading: tReading, type: "target" });
+
+                    if (tReading) {
+                        if (rawHiraStr.startsWith(tReading, hiraIdx)) {
+                            hiraIdx += tReading.length;
+                        } else {
+                            isScanSuccess = false;
+                        }
+                    } else {
+                        hiraIdx++;
+                    }
+                    continue;
+                }
+
+                const dictReadings = KANJI_MINI_DICT[char] || [];
+                let matched = "";
+                for (let r of dictReadings) {
+                    if (rawHiraStr.startsWith(r, hiraIdx)) {
+                        matched = r;
+                        break;
+                    }
+                }
+
+                if (matched) {
+                    assignment.push({ char: char, reading: matched, type: "kanji" });
+                    hiraIdx += matched.length;
+                } else {
+                    let nextTargetChar = kanjiStr[i + 1] || "";
+                    let chunkLen = -1;
+
+                    if (nextTargetChar) {
+                        if (/[\u3040-\u309F\u30A0-\u30FFー〜]/.test(nextTargetChar)) {
+                            let nextPos = rawHiraStr.indexOf(nextTargetChar, hiraIdx);
+                            if (nextPos !== -1) chunkLen = nextPos - hiraIdx;
+                        } else if (targetKanji.includes(nextTargetChar)) {
+                            let nextTR = targetReadings[targetIdx] || "";
+                            if (nextTR) {
+                                let nextPos = rawHiraStr.indexOf(nextTR, hiraIdx);
+                                if (nextPos !== -1) chunkLen = nextPos - hiraIdx;
+                            }
+                        } else {
+                            const nextDict = KANJI_MINI_DICT[nextTargetChar] || [];
+                            for (let nr of nextDict) {
+                                let nextPos = rawHiraStr.indexOf(nr, hiraIdx + 1);
+                                if (nextPos !== -1) {
+                                    chunkLen = nextPos - hiraIdx;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (chunkLen <= 0) {
+                        chunkLen = rawHiraStr.length - hiraIdx;
+                        if (i == kanjiStr.length - 1 && chunkLen > 4) {
+                            isScanSuccess = false; 
+                        }
+                    }
+
+                    let unknownChunk = rawHiraStr.substring(hiraIdx, hiraIdx + chunkLen);
+                    assignment.push({ char: char, reading: unknownChunk, type: "kanji_fallback" });
+                    hiraIdx += chunkLen;
+                }
+            }
+
+            if (hiraIdx !== rawHiraStr.length) {
+                isScanSuccess = false;
+            }
+
+            if (isScanSuccess) {
+                let finalHtml = "";
+                for (let item of assignment) {
+                    if (item.type === "kana" || item.type === "number") {
+                        finalHtml += item.char; 
+                    } else if (item.type === "target") {
+                        const rText = item.reading ? item.reading : "　";
+                        finalHtml += `<ruby>${item.char}<rt class="target-blind">${rText}</rt></ruby>`;
+                    } else {
+                        const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
+                        const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
+
+                        if (isUnlearned && item.reading) {
+                            finalHtml += `<ruby>${item.char}<rt>${item.reading}</rt></ruby>`;
+                        } else {
+                            finalHtml += item.char;
+                        }
+                    }
+                }
+                return finalHtml;
+            } else {
+                let hasUnlearned = false;
+                for (let char of kanjiStr) {
+                    if (!/[\u3040-\u309F\u30A0-\u30FFー〜0-9０-９]/.test(char)) {
+                        const score = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
+                        if (!score || score > currentQuestion.maxSelectedScore) {
+                            hasUnlearned = true;
+                        }
+                    }
+                }
+
+                let processedHira = rawHiraStr;
+                targetReadings.forEach(read => {
+                    if (read) {
+                        processedHira = processedHira.replace(read, "　".repeat(read.length));
+                    }
+                });
+
+                if (hasUnlearned) {
+                    return `${kanjiStr}<span style="font-size:1.4rem; color:var(--text-sub);">（${processedHira}）</span>`;
+                } else {
+                    return kanjiStr;
+                }
+            }
+        }
+
+        function nextQuestion() {
+            if (currentIdx >= maxQuestions) {
+                if (isTeacherMode) {
+                    backToSetup();
+                    alert("すべての カードの 表示が おわりました。");
+                    return;
+                }
+                showFinalResult();
+                return;
+            }
+
+            currentIdx++;
+            currentQuestion = activePool[currentIdx - 1];
+            const kData = currentQuestion.kanjiData;
+
+            document.getElementById('instruction-content').innerText = `${kData['教材名']} 【 ${kData['課']}-${kData['セクション']} 】`;
+            
+            const qKanji = kData['語彙_漢字'] || "";
+            const qHira = kData['語彙_ひらがな'] || "";
+            const qProgRead = kData['読み（プログラム用）'] || ""; 
+            const qTargetKanji = kData['学習漢字'] || "";          
+            const tbName = kData['教材名'] || "";
+            const qExceptionRead = kData['例外ルビ指定'] || "";
+
+            document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
+
+            document.getElementById('display-answer-block').classList.add('hidden');
+            document.getElementById('display-answer-word').innerText = qHira;
+
+            updateControlButtonsVisibility(false);
+            updateScoreBoard();
+        }
+
+        function showAnswer() {
+            document.getElementById('display-answer-block').classList.remove('hidden');
+            updateControlButtonsVisibility(true);
+        }
+
+        function updateControlButtonsVisibility(isAnswerVisible) {
+            const scoreBoard = document.getElementById('student-score-board');
+            const showAnswerBtn = document.getElementById('show-answer-btn');
+            const studentJudgeBtns = document.getElementById('student-judge-btns');
+            const studentNextBtn = document.getElementById('student-next-btn');
+            const teacherControlBtns = document.getElementById('teacher-control-btns');
+
+            if (isTeacherMode) {
+                scoreBoard.style.display = "none";
+                studentJudgeBtns.classList.add('hidden');
+                studentNextBtn.classList.add('hidden');
+
+                if (!isAnswerVisible) {
+                    showAnswerBtn.classList.remove('hidden');
+                    teacherControlBtns.classList.add('hidden');
+                } else {
+                    showAnswerBtn.classList.add('hidden');
+                    teacherControlBtns.classList.remove('hidden');
+                }
+            } else {
+                scoreBoard.style.display = "flex";
+                teacherControlBtns.classList.add('hidden');
+
+                if (!isAnswerVisible) {
+                    showAnswerBtn.classList.remove('hidden');
+                    studentJudgeBtns.classList.add('hidden');
+                    studentNextBtn.classList.add('hidden');
+                } else {
+                    showAnswerBtn.classList.add('hidden');
+                    studentJudgeBtns.classList.remove('hidden');
+                    studentNextBtn.classList.add('hidden');
+                }
+            }
+        }
+
+        function handleStudentJudge(isCorrect) {
+            document.getElementById('student-judge-btns').classList.add('hidden');
+            document.getElementById('student-next-btn').classList.remove('hidden');
+
+            if (isCorrect) {
+                correctCount++;
+                comboCount++;
+                playSound('audio-correct');
+            } else {
+                comboCount = 0;
+                playSound('audio-incorrect');
+                wrongObjectsPool.push(currentQuestion);
+                const kData = currentQuestion.kanjiData;
+                const txt = `・[${kData['課']}-${kData['セクション']}] ${kData['語彙_漢字']} ➔ こたえ: ${kData['語彙_ひらがな']}`;
+                wrongListText.push(txt);
+            }
+            updateScoreBoard();
+        }
+
+        function handleTeacherBack() {
+            if (currentIdx > 1) {
+                currentIdx -= 2; 
+                nextQuestion();
+            } else {
+                alert("これが 最初の カードです。");
+            }
+        }
+
+        function handleTeacherNext() {
+            nextQuestion();
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-current-idx').innerText = currentIdx;
+            document.getElementById('score-max-questions').innerText = maxQuestions;
+            document.getElementById('score-correct').innerText = correctCount;
+            document.getElementById('score-combo').innerText = comboCount;
+        }
+
+        function showFinalResult() {
+            document.getElementById('drill-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            const rate = Math.round((correctCount / maxQuestions) * 100);
+            document.getElementById('result-score').innerText = `${correctCount} / ${maxQuestions} (${rate}%)`;
+
+            let comment = "つぎも がんばりましょう！";
+            if (rate === 100) {
+                comment = "素晴らしい！パーフェクトです！🎉";
+                playSound('audio-perfect');
+            } else if (rate >= 80) {
+                comment = "お見事！よくできました！✨";
+                playSound('audio-good');
+            } else {
+                playSound('audio-cheer');
+            }
+            document.getElementById('result-comment').innerText = comment;
+
+            const retryContainer = document.getElementById('retry-wrong-container');
+            const wrongContainer = document.getElementById('wrong-list-container');
+            const wrongTextArea = document.getElementById('wrong-list-area');
+
+            if (wrongObjectsPool.length > 0) {
+                retryContainer.classList.remove('hidden');
+                wrongContainer.classList.remove('hidden');
+                wrongTextArea.value = wrongListText.join('\n');
+            } else {
+                retryContainer.classList.add('hidden');
+                wrongContainer.classList.add('hidden');
+                wrongTextArea.value = "";
+            }
+        }
+
+        document.getElementById('copy-wrong-btn').addEventListener('click', function() {
+            const wrongTextArea = document.getElementById('wrong-list-area');
+            wrongTextArea.select();
+            document.execCommand('copy');
+            alert("クリップボードに コピーしました！");
+        });
+
+        function backToSetup() {
+            document.getElementById('drill-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+
+        document.getElementById('show-answer-btn').addEventListener('click', showAnswer);
+        
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('drill-screen').classList.contains('hidden')) return;
+
+            if (!document.getElementById('show-answer-btn').classList.contains('hidden')) {
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    showAnswer();
+                    e.preventDefault();
+                }
+            } 
+            else {
+                if (isTeacherMode) {
+                    if (e.key === 'ArrowRight' || e.code === 'Space' || e.code === 'Enter') {
+                        handleTeacherNext();
+                        e.preventDefault();
+                    }
+                    if (e.key === 'ArrowLeft') {
+                        handleTeacherBack();
+                        e.preventDefault();
+                    }
+                } else {
+                    if (!document.getElementById('student-judge-btns').classList.contains('hidden')) {
+                        if (e.key === 'j' || e.key === 'J') {
+                            handleStudentJudge(true);
+                            e.preventDefault();
+                        }
+                        if (e.key === 'k' || e.key === 'K') {
+                            handleStudentJudge(false);
+                            e.preventDefault();
+                        }
+                    } else if (!document.getElementById('student-next-btn').classList.contains('hidden')) {
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            nextQuestion();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            }
+        });
+
+        // 🚀 アプリ起動時の初期化（Excel自動読み込み機能）
+        window.addEventListener('DOMContentLoaded', () => {
+            // 最初は通常のスマホ（生徒用）スキンでセットアップ
+            toggleTeacherMode(false);
+            backToSetup();
+
+            // 📂 同じフォルダ内にある「kanji.xlsx」を自動的に読み込む
+            fetch('kanji.xlsx')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('自動読み込み用の kanji.xlsx が見つかりません。');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(data => {
+                    const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
+                    processWorkbook(workbook);
+                    console.log('kanji.xlsx を自動的に読み込みました。');
+                })
+                .catch(error => {
+                    // kanji.xlsx が配置されていない場合は、手動でファイル選択できるよう警告を残すのみとする
+                    console.warn(error.message);
+                });
+        });
+    </script>
+</body>
+</html>

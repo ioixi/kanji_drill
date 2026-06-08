@@ -24,7 +24,7 @@
             --card-font-size: 2.8rem;
         }
 
-        /* 👨‍🏫 【教師モード専用】クイズ画面のみをターゲットにした高コントラストスキン */
+        /* 👨‍🏫 【教師モード専用】クイズ（ドリル）画面のみをターゲットにした高コントラストスキン */
         body.teacher-mode-active #drill-screen {
             --bg-color: #ffffff !important;
             --card-bg: #ffffff !important;
@@ -135,7 +135,7 @@
             line-height: 1.2 !important;
         }
 
-        /* 👑 CSSの力だけで操作エリア全体を画面底面に完全固定（JSの手出しを不要にする） */
+        /* 👑 CSSの力だけで操作エリア全体を画面底面に完全固定（JSのバグ発生源をカット） */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
             bottom: 0 !important;
@@ -167,7 +167,7 @@
             margin-top: 6px;
         }
 
-        /* 🔒 通常時（学生モード）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
+        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
         #excel-file-picker {
             display: none !important;
         }
@@ -177,7 +177,7 @@
             margin-top: 5px !important;
         }
 
-        /* 横画面（landscape）時の最大幅設定 */
+        /* 横画面（landscape）時の最大幅設定を上書き・最適化 */
         @media (orientation: landscape) {
             body.teacher-mode-active #setup-screen, 
             body.teacher-mode-active #drill-screen, 
@@ -192,7 +192,7 @@
             }
         }
 
-        /* --- 以下、元の通常スタイル --- */
+        /* --- 以下、元の通常スタイル（一切変更なし・完全維持） --- */
         #action-area button {
             padding: 24px 16px !important;
             border-radius: 14px !important;
@@ -626,7 +626,7 @@
 
     <script>
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["hachii","you","da","ya"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["hachii","you","da","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["ka"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -674,6 +674,21 @@
         let isMuted = false;
         let isTeacherMode = false; 
 
+        // 👑 復元：モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
+        function resetButtonsForCurrentMode(isAnswerVisible) {
+            document.getElementById('show-answer-btn').classList.toggle('hidden', isAnswerVisible);
+            
+            if (isTeacherMode) {
+                document.getElementById('student-judge-btns').classList.add('hidden');
+                document.getElementById('student-next-btn').classList.add('hidden');
+                document.getElementById('teacher-control-btns').classList.toggle('hidden', !isAnswerVisible);
+            } else {
+                document.getElementById('teacher-control-btns').classList.add('hidden');
+                document.getElementById('student-next-btn').classList.add('hidden');
+                document.getElementById('student-judge-btns').classList.toggle('hidden', !isAnswerVisible);
+            }
+        }
+
         function toggleTeacherMode(enabled) {
             isTeacherMode = enabled;
             const switchEl = document.getElementById('global-teacher-switch');
@@ -687,7 +702,6 @@
                 document.getElementById('student-score-board').style.display = "flex";
             }
             
-            // ドリル画面起動中なら、ボタン表示を正しくリセット
             if (!document.getElementById('drill-screen').classList.contains('hidden')) {
                 const answerVisible = !document.getElementById('display-answer-block').classList.contains('hidden') && 
                                       !document.getElementById('display-answer-block').classList.contains('invisible');
@@ -696,6 +710,7 @@
             }
         }
 
+        // 手動ファイルピッカーからの読み込み
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -714,6 +729,7 @@
             reader.readAsArrayBuffer(file);
         });
 
+        // 自動ロード・手動選択で完全に共有される統合データ解析ロジック
         function processWorkbook(workbook) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
@@ -1193,30 +1209,6 @@
             }
         }
 
-        function updateTeacherCounter() {
-            const counterEl = document.getElementById('teacher-counter');
-            if (isTeacherMode) {
-                counterEl.textContent = `問題: ${currentIdx}/${maxQuestions}`;
-            } else {
-                counterEl.textContent = "";
-            }
-        }
-
-        // 👑 復元：モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
-        function resetButtonsForCurrentMode(isAnswerVisible) {
-            document.getElementById('show-answer-btn').classList.toggle('hidden', isAnswerVisible);
-            
-            if (isTeacherMode) {
-                document.getElementById('student-judge-btns').classList.add('hidden');
-                document.getElementById('student-next-btn').classList.add('hidden');
-                document.getElementById('teacher-control-btns').classList.toggle('hidden', !isAnswerVisible);
-            } else {
-                document.getElementById('teacher-control-btns').classList.add('hidden');
-                document.getElementById('student-next-btn').classList.add('hidden');
-                document.getElementById('student-judge-btns').classList.toggle('hidden', !isAnswerVisible);
-            }
-        }
-
         function nextQuestion() {
             if (currentIdx >= maxQuestions) {
                 if (isTeacherMode) {
@@ -1255,7 +1247,7 @@
             
             document.getElementById('display-answer-word').innerText = qHira;
 
-            // 👑 復元：JSを極限までシンプルにするため、次の問題にいくタイミングで初期化
+            // 👑 以前の仕様に復元：次の問題にいくタイミングで直接ボタン状態をリセット
             resetButtonsForCurrentMode(false);
             updateScoreBoard();
             updateTeacherCounter(); 
@@ -1266,11 +1258,11 @@
             answerBlock.classList.remove('hidden');
             answerBlock.classList.remove('invisible'); 
             
-            // 👑 復元：答えを表示した際の状態にリセット
+            // 👑 以前の仕様に復元：答えを表示した直後に直接ボタン状態をリセット
             resetButtonsForCurrentMode(true);
         }
 
-        // 👑 復元：以前の100%安定していたシンプルなボタン隠しロジックに完全差し替え
+        // 👑 以前の仕様に復元：元の100%安定していたシンプルなボタン隠し処理
         function handleStudentJudge(isCorrect) {
             document.getElementById('student-judge-btns').classList.add('hidden');
             document.getElementById('student-next-btn').classList.remove('hidden');

@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
+    <link class="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -692,6 +692,7 @@
             }
         }
 
+        // 手動ファイルピッカーからの読み込み
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -710,7 +711,7 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // 📂 元のindex.htmlの共有データ解析ロジック（自動読み込み・手動共通）
+        // 📊 自動ロード・手動選択で完全に共有される統合データ解析ロジック
         function processWorkbook(workbook) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
@@ -1153,7 +1154,7 @@
                         const rText = item.reading ? item.reading : " ";
                         finalHtml += `<ruby>${item.char}<rt class="target-blind">${rText}</rt></ruby>`;
                     } else {
-                        const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
+                        const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
                         const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
 
                         if (isUnlearned && item.reading) {
@@ -1415,27 +1416,28 @@
             }
         });
 
-        // 🚀 【完全復元】アプリ起動時の初期化（Excel自動読み込み機能）
+        // 🚀 【完全復元】アプリ起動時の初期化および「kanji.xlsx」の自動ロード処理
         window.addEventListener('DOMContentLoaded', () => {
             toggleTeacherMode(false);
             backToSetup();
 
-            // 📂 同じフォルダ内にある元の「kanji.xlsx」を正確に自動読み込み
+            // 同じ階層にある「kanji.xlsx」をサーバー経由で自動フェッチ
             fetch('kanji.xlsx')
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('自動読み込み用の kanji.xlsx が見つかりません。');
+                        throw new Error('自動読み込み用の kanji.xlsx がサーバー上に見つかりません。');
                     }
                     return response.arrayBuffer();
                 })
                 .then(data => {
+                    // データの展開と共通ロジック「processWorkbook」への引き渡し
                     const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
                     processWorkbook(workbook);
-                    console.log('kanji.xlsx を自動的に読み込みました。');
+                    console.log('✓ kanji.xlsx を自動的にロードし解析しました。');
                 })
                 .catch(error => {
                     console.warn(error.message);
-                    showFileStatus(false, "自動読み込み用の kanji.xlsx が見つかりません。");
+                    showFileStatus(false, "kanji.xlsx の自動よみこみに 失敗しました。同じフォルダにファイルがあるか確認してください。");
                 });
         });
     </script>

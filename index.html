@@ -36,6 +36,14 @@
             --primary: #000000 !important;
             --accent: #000000 !important; 
         }
+
+        /* 教師モードかつ隠蔽対象のルビ（.target-blind）は、高コントラストスキン適用時も絶対に透明を維持する */
+        body.teacher-mode-active #drill-screen #display-word-area rt.target-blind {
+            color: transparent !important;
+            background: transparent !important;
+            -webkit-user-select: none;
+            user-select: none;
+        }
         
         body.teacher-mode-active {
             transition: background 0.2s, color 0.2s;
@@ -1006,7 +1014,7 @@
             initDrillSession();
         }
 
-        function buildDynamicRuby(kanjiStr, rawHiraStr, progReadStr, targetKanji, textbookName, exceptionReadStr) {
+        function buildDynamicRuby(kanjiStr, rawHiraStr, progReadStr, targetKanji, textbookName, exceptionReadStr, maxSelectedScore) {
             if (!kanjiStr) return "";
             kanjiStr = String(kanjiStr).trim();
             rawHiraStr = String(rawHiraStr).trim();
@@ -1032,7 +1040,7 @@
                         } 
                         else {
                             const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
-                            const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
+                            const isUnlearned = (!kScore || kScore > maxSelectedScore);
 
                             if (isUnlearned && rText && rText !== " ") {
                                 finalHtml += `<ruby>${char}<rt>${rText}</rt></ruby>`;
@@ -1165,6 +1173,9 @@
                         chunkLen = 1;
                     }
 
+                    // 👇 ここに新しくこの1行を追加（挿入）してください
+                    if (chunkLen <= 0) chunkLen = 1;
+
                     let unknownChunk = rawHiraStr.substring(hiraIdx, hiraIdx + chunkLen);
                     assignment.push({ char: char, reading: unknownChunk, type: "kanji_fallback" });
                     hiraIdx += chunkLen;
@@ -1185,7 +1196,7 @@
                         finalHtml += `<ruby>${item.char}<rt class="target-blind">${rText}</rt></ruby>`;
                     } else {
                         const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
-                        const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
+                        const isUnlearned = (!kScore || kScore > maxSelectedScore);
 
                         if (isUnlearned && item.reading) {
                             finalHtml += `<ruby>${item.char}<rt>${item.reading}</rt></ruby>`;
@@ -1200,7 +1211,7 @@
                 for (let char of kanjiStr) {
                     if (!/[\u3040-\u309F\u30A0-\u30FFー〜0-9０-９]/.test(char)) {
                         const score = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
-                        if (!score || score > currentQuestion.maxSelectedScore) {
+                        if (!score || score > maxSelectedScore) {
                             hasUnlearned = true;
                         }
                     }
@@ -1245,7 +1256,12 @@
             const tbName = kData['教材名'] || "";
             const qExceptionRead = kData['例外ルビ指定'] || "";
 
-            document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
+            // 👑 解決策：ブラウザの先走りを防ぐため、一番最初に答えの文字をセットしておく
+            document.getElementById('display-answer-word').innerText = qHira;
+
+            const currentMaxScore = currentQuestion ? currentQuestion.maxSelectedScore : 0;
+            const strictMaxScore = activePool[currentIdx - 1] ? activePool[currentIdx - 1].maxSelectedScore : 0;
+            document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead, strictMaxScore);
 
             const answerBlock = document.getElementById('display-answer-block');
             if (isTeacherMode) {
@@ -1255,8 +1271,6 @@
                 answerBlock.classList.add('hidden');
                 answerBlock.classList.remove('invisible');
             }
-            
-            document.getElementById('display-answer-word').innerText = qHira;
 
             resetButtonsForCurrentMode(false);
             updateScoreBoard();

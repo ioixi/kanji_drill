@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.6_student</title>
+    <title>漢字ドリル - v1.0.8_student</title>
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,7 +50,7 @@
             margin-bottom: 0 !important;
             
             /* 画面全体の縦幅から固定ボタン領域を引いた全画面表示 */
-            height: calc(100vh - 160px) !important;
+            height: calc(100vh - 170px) !important;
             min-height: auto !important; 
             display: flex !important;
             flex-direction: column !important;
@@ -93,23 +93,24 @@
             padding-bottom: 8px !important;
         }
 
-        /* 教師モード専用の進行カウンター（左上固定・視認性調整） */
+        /* 教師モード専用の進行カウンター（最前面に確実に固定配置） */
         #teacher-counter {
             display: none;
         }
         body.teacher-mode-active #drill-screen #teacher-counter {
             display: block;
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 1.8rem;
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            font-size: 1.6rem;
             font-weight: bold;
             color: #000000;
-            z-index: 100;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid #000000;
-            border-radius: 6px;
-            padding: 6px 14px;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid #000000;
+            border-radius: 8px;
+            padding: 6px 16px;
+            pointer-events: none; /* タップの邪魔をしないガード */
         }
 
         /* 答えエリアの境界線と文字サイズ（vmin基準で綺麗に1行固定） */
@@ -130,19 +131,21 @@
             line-height: 1.2 !important;
         }
 
-        /* 操作エリア全体の固定化 */
+        /* 操作エリア全体の固定化（iPadのホームバーとの衝突を避けるため少し浮かせる） */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
-            bottom: 0 !important;
+            bottom: 12px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            width: 100% !important;
+            width: 92% !important;
             max-width: 600px !important;
             background: #ffffff !important;
-            border-top: 3px solid #000000 !important;
+            border: 3px solid #000000 !important;
+            border-radius: 16px;
             padding: 12px 15px env(safe-area-inset-bottom) 15px !important;
             box-sizing: border-box;
-            z-index: 99;
+            z-index: 999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
         
         /* 教師モード時の底面ボタンのスタイル調整 */
@@ -183,6 +186,7 @@
                 width: 100% !important; 
             }
             body.teacher-mode-active #drill-screen #action-area {
+                width: 95% !important;
                 max-width: 95% !important; 
             }
         }
@@ -620,7 +624,6 @@
     <audio id="audio-cheer" src="se/cheer.mp3" preload="auto"></audio>
 
     <script>
-        // 👑 修正：無限ループの原因だった "hachii" のタイポを "はち" に正確に修正
         let KANJI_MINI_DICT = {
             "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["はち","よう","だ","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["ka"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
         };
@@ -684,7 +687,6 @@
             }
         }
 
-        // 👑 修正：進行カウンターに文字を正確に代入する統合関数を新設
         function updateTeacherCounter() {
             const counterEl = document.getElementById('teacher-counter');
             if (isTeacherMode) {
@@ -1129,6 +1131,7 @@
 
                     if (nextTargetChar) {
                         if (/[\u3040-\u309F\u30A0-\u30FFー〜]/.test(nextTargetChar)) {
+                            // 👑 修正：存在しない nextNormalChar から 正しい nextTargetChar に修正
                             let nextPos = rawHiraStr.indexOf(nextTargetChar, hiraIdx);
                             if (nextPos !== -1) chunkLen = nextPos - hiraIdx;
                         } else if (targetKanji.includes(nextTargetChar)) {
@@ -1154,6 +1157,11 @@
                         if (i == kanjiStr.length - 1 && chunkLen > 4) {
                             isScanSuccess = false; 
                         }
+                    }
+
+                    // 👑 修正：辞書未登録の漢字処理でインデックスが一切進まなくなる無限ループをガード
+                    if (chunkLen <= 0) {
+                        chunkLen = 1;
                     }
 
                     let unknownChunk = rawHiraStr.substring(hiraIdx, hiraIdx + chunkLen);
@@ -1238,7 +1246,6 @@
 
             document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
 
-            // 教師モード時のガタつき防止
             const answerBlock = document.getElementById('display-answer-block');
             if (isTeacherMode) {
                 answerBlock.classList.remove('hidden');
@@ -1250,7 +1257,6 @@
             
             document.getElementById('display-answer-word').innerText = qHira;
 
-            // 👑 修正：毎問題の切り替え時に、左上の問題数表示を確実にアップデート
             resetButtonsForCurrentMode(false);
             updateScoreBoard();
             updateTeacherCounter(); 
@@ -1395,7 +1401,6 @@
             }
         });
 
-        // アプリ起動時の初期化および「kanji.xlsx」の自動ロード処理
         window.addEventListener('DOMContentLoaded', () => {
             toggleTeacherMode(false);
             backToSetup();

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.5_student</title>
+    <title>漢字ドリル - v1.0.6_student</title>
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -68,23 +68,18 @@
             justify-content: center !important; 
             align-items: center !important;     
             box-sizing: border-box;
-            padding: 10px 20px !important;
+            padding: 10px 40px !important; /* 横の余白を少し広げてはみ出しを防ぐ */
             overflow: hidden;
         }
 
-        /* 教材情報（○課）の位置調整 */
+        /* 👑 修正：教師モード時は「教材情報」を完全に画面から消去する */
         body.teacher-mode-active #drill-screen #display-target-info {
-            font-size: 1.5rem !important;
-            color: #666666 !important;
-            margin-bottom: 10px !important;
-            position: absolute;
-            top: 15px;
-            right: 20px;
+            display: none !important;
         }
 
-        /* 問題テキストの超巨大化（vh単位でプロジェクター限界まで拡大） */
+        /* 👑 修正：文字サイズを vmin（画面の短い方基準）に変更し、縦画面崩れと長い文字の改行を完全に解決 */
         body.teacher-mode-active #drill-screen #display-word-area {
-            font-size: 18vh !important; 
+            font-size: 15vmin !important; /* 縦でも横でも画面幅に美しく収まるサイズ */
             line-height: 1.2 !important;
             color: #000000 !important;
             font-weight: 900 !important;
@@ -92,32 +87,32 @@
 
         /* 教師モード時のルビ（ふりがな）サイズの大幅引き上げ */
         body.teacher-mode-active #drill-screen #display-word-area rt {
-            font-size: 3.5vh !important; 
+            font-size: 3.2vmin !important; 
             font-weight: bold !important;
             color: #000000 !important;
             padding-bottom: 8px !important;
         }
 
-        /* 教師モード専用の進行カウンター（左上固定） */
+        /* 👑 修正：教師モード専用の進行カウンター（左上固定・デザイン微調整） */
         #teacher-counter {
             display: none;
         }
         body.teacher-mode-active #drill-screen #teacher-counter {
             display: block;
             position: absolute;
-            top: 15px;
-            left: 15px;
-            font-size: 2.0rem;
+            top: 20px;
+            left: 20px;
+            font-size: 1.8rem;
             font-weight: bold;
             color: #000000;
             z-index: 100;
             background: rgba(255, 255, 255, 0.9);
             border: 2px solid #000000;
             border-radius: 6px;
-            padding: 4px 12px;
+            padding: 6px 14px;
         }
 
-        /* 答えエリアの境界線と文字サイズの超巨大化 */
+        /* 答えエリアの境界線と文字サイズ（vmin基準で綺麗に1行固定） */
         body.teacher-mode-active #drill-screen #display-answer-block {
             margin-top: 0 !important;
             padding-top: 0 !important;
@@ -129,13 +124,13 @@
             align-items: center !important;
         }
         body.teacher-mode-active #drill-screen #display-answer-word { 
-            font-size: 14vh !important; 
+            font-size: 11.5vmin !important; /* 「けんこうほけんしょう」が横画面で確実に1行に収まるサイズ */
             color: #000000 !important; 
             font-weight: 900 !important;
             line-height: 1.2 !important;
         }
 
-        /* 👑 CSSの力だけで操作エリア全体を画面底面に完全固定（JSのバグ発生源をカット） */
+        /* 操作エリア全体の固定化 */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
             bottom: 0 !important;
@@ -674,7 +669,7 @@
         let isMuted = false;
         let isTeacherMode = false; 
 
-        // 👑 復元：モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
+        // モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
         function resetButtonsForCurrentMode(isAnswerVisible) {
             document.getElementById('show-answer-btn').classList.toggle('hidden', isAnswerVisible);
             
@@ -1023,7 +1018,7 @@
                             finalHtml += `<ruby>${char}<rt class="target-blind">${rText}</rt></ruby>`;
                         } 
                         else {
-                            const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
+                            const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
                             const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
 
                             if (isUnlearned && rText && rText !== " ") {
@@ -1247,10 +1242,10 @@
             
             document.getElementById('display-answer-word').innerText = qHira;
 
-            // 👑 以前の仕様に復元：次の問題にいくタイミングで直接ボタン状態をリセット
+            // 以前の仕様に復元：次の問題にいくタイミングで直接ボタン状態をリセット
             resetButtonsForCurrentMode(false);
             updateScoreBoard();
-            updateTeacherCounter(); 
+            updateTeacherCounter(); // 👑 復元：左上カウンターの表示を毎問題アップデート
         }
 
         function showAnswer() {
@@ -1258,11 +1253,11 @@
             answerBlock.classList.remove('hidden');
             answerBlock.classList.remove('invisible'); 
             
-            // 👑 以前の仕様に復元：答えを表示した直後に直接ボタン状態をリセット
+            // 以前の仕様に復元：答えを表示した直後に直接ボタン状態をリセット
             resetButtonsForCurrentMode(true);
         }
 
-        // 👑 以前の仕様に復元：元の100%安定していたシンプルなボタン隠し処理
+        // 以前の仕様に復元：元の100%安定していたシンプルなボタン隠し処理
         function handleStudentJudge(isCorrect) {
             document.getElementById('student-judge-btns').classList.add('hidden');
             document.getElementById('student-next-btn').classList.remove('hidden');

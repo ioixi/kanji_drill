@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>漢字ドリル - v1.0.4_student</title>
+    <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link class="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -164,6 +165,16 @@
         
         body.teacher-mode-active #drill-screen .quit-btn-wrapper {
             margin-top: 6px;
+        }
+
+        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
+        #excel-file-picker {
+            display: none !important;
+        }
+        /* 🔓 教師モード（ON時）だけ、ファイル選択ボタンを画面に出現させる */
+        body.teacher-mode-active #excel-file-picker {
+            display: inline-block !important;
+            margin-top: 5px !important;
         }
 
         /* 横画面（landscape）時の最大幅設定を上書き・最適化 */
@@ -342,15 +353,16 @@
             margin-bottom: 10px;
         }
         .btn-small {
-            padding: 6px 12px;
+            padding: 8px 12px;
             font-size: 0.85rem;
-            border-radius: 6px;
-            width: auto;
+            border-radius: 8px;
+            width: 100%;
             margin-bottom: 0;
             background: #3a3a44;
             color: var(--text-main);
             border: 1px solid #555;
             cursor: pointer;
+            line-height: 1.4;
         }
 
         .nested-checkbox-area {
@@ -420,9 +432,9 @@
         .btn-mark { display: block; font-size: 1.4rem; }
 
         .teacher-control-container {
-            display: flex;
-            gap: 12px;
-            width: 100%;
+            display: flex; 
+            gap: 12px; 
+            width: 100%; 
             box-sizing: border-box;
         }
         
@@ -460,9 +472,6 @@
         
         #display-answer-block { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #444; width: 100%; }
         #display-answer-word { font-size: 2.8rem; font-weight: bold; color: #ffeb3b; line-height: 1.5; letter-spacing: 0.02em; word-break: break-all; }
-        
-        .file-status { font-size: 0.9rem; color: #888; margin-top: 5px; text-align: center; font-family: sans-serif; font-weight: bold; }
-        #wrong-list-area { width: 100%; height: 120px; background: #2a2a32; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 0.9rem; margin-bottom: 10px; text-align: left; font-family: sans-serif; }
     </style>
 </head>
 <body>
@@ -478,23 +487,23 @@
         <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-family: sans-serif;">漢字ドリル</h2>
         <p style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 25px; font-family: sans-serif;">よみかたの れんしゅう アプリ</p>
         
-        <div class="form-group" style="text-align: center; padding: 15px; display: none;">
-            <input type="file" id="excel-file-picker" accept=".xlsx, .xls">
+        <div class="form-group" style="text-align: center; padding: 15px;">
+            <input type="file" id="excel-file-picker" accept=".xlsx, .xls" style="font-size: 10pt; color: #fff; margin-bottom: 10px;">
+            <div id="file-status-text" class="file-status" style="color: #ffb74d;">📅 エクセルファイルを えらんでください</div>
         </div>
-        <div id="file-status-text" class="file-status" style="color: #ffb74d; margin-bottom: 15px;">🔄 データを よみこんでいます...</div>
 
         <div class="form-group">
-            <label>📖 練習（れんしゅう）する 教材（きょうざい）</label>
+            <label>📖 練習する教材</label>
             <select id="textbook-select" onchange="updateRangeUI()">
                 <option value="">データを よみこんでください</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label>🎯 練習（れんしゅう）する 課・セクション（ピンポイント選択）</label>
+            <label>🎯 練習する課・セクション</label>
             <div class="select-toggle-area">
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択（ぜんせんたく）</button>
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除（ぜんかいじょ）</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択<br>(ぜんせんたく)</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除<br>(ぜんかいじょ)</button>
             </div>
             <div id="nested-checkbox-area" class="nested-checkbox-area">
                 <span style="color:#666; font-size:0.9rem;">データを よみこむまで お待ちください</span>
@@ -617,7 +626,7 @@
 
     <script>
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["はち","よう","や"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["hachii","you","da","ya"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -665,37 +674,11 @@
         let isMuted = false;
         let isTeacherMode = false; 
 
-        // 💡 学生用（index）の自動ファイル読み込み関数
-        async function autoLoadExcelFromServer() {
-            const fileName = "kanji_data.xlsx"; // 同一ディレクトリ内のExcelを想定
-            try {
-                const response = await fetch(fileName);
-                if (!response.ok) throw new Error("Network response was not ok");
-                const arrayBuffer = await response.arrayBuffer();
-                const data = new Uint8Array(arrayBuffer);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                allData = XLSX.utils.sheet_to_json(worksheet);
-                
-                if (allData.length > 0) {
-                    analyzeExcelStructure();
-                    buildTextbookKanjiMap(); 
-                    showFileStatus(true, "準備（じゅんび）が できました！");
-                } else {
-                    showFileStatus(false, "データが 空っぽです");
-                }
-            } catch (err) {
-                console.error(err);
-                showFileStatus(false, "エクセルデータの自動よみこみに 失敗しました。");
-            }
-        }
-        // 画面立ち上げ時に自動実行
-        autoLoadExcelFromServer();
-
         function toggleTeacherMode(enabled) {
             isTeacherMode = enabled;
+            const switchEl = document.getElementById('global-teacher-switch');
+            if (switchEl) switchEl.checked = enabled;
+
             if (enabled) {
                 document.body.classList.add('teacher-mode-active');
             } else {
@@ -709,7 +692,6 @@
             }
         }
 
-        // 手動選択時のリスナーも互換性のために維持
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -719,18 +701,7 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    allData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (allData.length > 0) {
-                        analyzeExcelStructure();
-                        buildTextbookKanjiMap(); 
-                        showFileStatus(true, "準備（じゅんび）が できました！");
-                    } else {
-                        showFileStatus(false, "データが 空っぽです");
-                    }
+                    processWorkbook(workbook);
                 } catch (err) {
                     console.error(err);
                     showFileStatus(false, "ファイルの よみこみに 失敗しました。");
@@ -738,6 +709,22 @@
             };
             reader.readAsArrayBuffer(file);
         });
+
+        // 📂 元のindex.htmlの共有データ解析ロジック（自動読み込み・手動共通）
+        function processWorkbook(workbook) {
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            allData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (allData.length > 0) {
+                analyzeExcelStructure();
+                buildTextbookKanjiMap(); 
+                showFileStatus(true, "準備（じゅんび）が できました！");
+            } else {
+                showFileStatus(false, "データが 空っぽです");
+            }
+        }
 
         function showFileStatus(success, message = "") {
             const statusText = document.getElementById('file-status-text');
@@ -887,8 +874,9 @@
             if (isMuted) return;
             const audio = document.getElementById(audioId);
             if (audio) {
+                audio.prevTime = 0; 
                 audio.currentTime = 0;
-                audio.play().catch(()=>{});
+                audio.play().catch((e)=>{ console.warn("Audio play blocked:", e); });
             }
         }
 
@@ -1237,6 +1225,7 @@
 
             document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
 
+            // 教師モード時のガタつき防止のため、枠だけ残して透明化(invisible)にする
             const answerBlock = document.getElementById('display-answer-block');
             if (isTeacherMode) {
                 answerBlock.classList.remove('hidden');
@@ -1256,7 +1245,7 @@
         function showAnswer() {
             const answerBlock = document.getElementById('display-answer-block');
             answerBlock.classList.remove('hidden');
-            answerBlock.classList.remove('invisible');
+            answerBlock.classList.remove('invisible'); 
             updateControlButtonsVisibility(true);
         }
 
@@ -1424,6 +1413,30 @@
                     }
                 }
             }
+        });
+
+        // 🚀 【完全復元】アプリ起動時の初期化（Excel自動読み込み機能）
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleTeacherMode(false);
+            backToSetup();
+
+            // 📂 同じフォルダ内にある元の「kanji.xlsx」を正確に自動読み込み
+            fetch('kanji.xlsx')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('自動読み込み用の kanji.xlsx が見つかりません。');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(data => {
+                    const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
+                    processWorkbook(workbook);
+                    console.log('kanji.xlsx を自動的に読み込みました。');
+                })
+                .catch(error => {
+                    console.warn(error.message);
+                    showFileStatus(false, "自動読み込み用の kanji.xlsx が見つかりません。");
+                });
         });
     </script>
 </body>

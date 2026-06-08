@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.9_student</title>
+    <title>漢字ドリル - v1.1.0_student</title>
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -134,7 +134,7 @@
             line-height: 1.2 !important;
         }
 
-        /* 👑 修正：操作エリア全体の固定化（変な枠線と影を消去し、白背景に完全同化） */
+        /* 👑 修正：iPadでの勝手な装飾・外枠を、標準仕様に則って安全にリセット（他への影響なし） */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
             bottom: 12px !important;
@@ -143,7 +143,8 @@
             width: 92% !important;
             max-width: 600px !important;
             background: #ffffff !important;
-            border: none !important; /* 外枠を消去 */
+            -webkit-appearance: none; /* Safari独自の自動フォーム装飾を無効化 */
+            border: 0px solid transparent !important; /* WebKitバグを回避して安全に枠線をリセット */
             border-radius: 0px !important;
             padding: 12px 15px env(safe-area-inset-bottom) 15px !important;
             box-sizing: border-box;
@@ -211,7 +212,7 @@
         }
 
         body { 
-            /* 👑 修正：フォントファミリーに Noto Sans JP を追加し、OS標準ゴシックへフォールバックする構成に刷新 */
+            /* 👑 フォントファミリーに Noto Sans JP をメイン指定し、オフライン時はOS標準の美しいゴシックへ割り振る構成 */
             font-family: 'Noto Sans JP', '-apple-system', 'BlinkMacSystemFont', 'Hiragino Kaku Gothic ProN', 'Hiragino Maru Gothic ProN', Arial, sans-serif; 
             background: var(--bg-color); 
             color: var(--text-main);
@@ -581,7 +582,7 @@
                     <span class="btn-mark">⭕</span>
                 </button>
             </div>
-            <button id="student-next-btn" class="btn-primary hidden" onclick="nextQuestion()">つぎへ ➔</button>
+            <button id="student-next-btn" class="btn-primary hidden" onclick="nextQuestion()">つぎへ ＞</button>
 
             <div id="teacher-control-btns" class="teacher-control-container hidden">
                 <button id="btn-teacher-back" class="btn-secondary" style="flex: 1;" onclick="handleTeacherBack()">◀ もどる</button>
@@ -1319,7 +1320,7 @@
             let comment = "つぎも がんばりましょう！";
             if (rate === 100) {
                 comment = "素晴らしい！パーフェクトです！🎉";
-                playSound('audio-perfect');
+                playSound('auto-perfect');
             } else if (rate >= 80) {
                 comment = "お見事！よくできました！✨";
                 playSound('audio-good');

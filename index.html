@@ -68,24 +68,24 @@
             justify-content: center !important; 
             align-items: center !important;     
             box-sizing: border-box;
-            padding: 10px 40px !important; /* 横の余白を少し広げてはみ出しを防ぐ */
+            padding: 10px 40px !important; /* 横の余白を広げてはみ出しを防ぐ */
             overflow: hidden;
         }
 
-        /* 👑 修正：教師モード時は「教材情報」を完全に画面から消去する */
+        /* 教師モード時は「教材情報」を完全に画面から消去（カードへの集中） */
         body.teacher-mode-active #drill-screen #display-target-info {
             display: none !important;
         }
 
-        /* 👑 修正：文字サイズを vmin（画面の短い方基準）に変更し、縦画面崩れと長い文字の改行を完全に解決 */
+        /* 文字サイズを vmin（画面の短い方基準）に変更し、縦画面崩れと長い文字の改行を解決 */
         body.teacher-mode-active #drill-screen #display-word-area {
-            font-size: 15vmin !important; /* 縦でも横でも画面幅に美しく収まるサイズ */
+            font-size: 15vmin !important; 
             line-height: 1.2 !important;
             color: #000000 !important;
             font-weight: 900 !important;
         }
 
-        /* 教師モード時のルビ（ふりがな）サイズの大幅引き上げ */
+        /* 教師モード時のルビ（ふりがな）サイズ */
         body.teacher-mode-active #drill-screen #display-word-area rt {
             font-size: 3.2vmin !important; 
             font-weight: bold !important;
@@ -93,7 +93,7 @@
             padding-bottom: 8px !important;
         }
 
-        /* 👑 修正：教師モード専用の進行カウンター（左上固定・デザイン微調整） */
+        /* 教師モード専用の進行カウンター（左上固定・視認性調整） */
         #teacher-counter {
             display: none;
         }
@@ -124,7 +124,7 @@
             align-items: center !important;
         }
         body.teacher-mode-active #drill-screen #display-answer-word { 
-            font-size: 11.5vmin !important; /* 「けんこうほけんしょう」が横画面で確実に1行に収まるサイズ */
+            font-size: 11.5vmin !important; /* 長い答えも確実に1行に収まるサイズ */
             color: #000000 !important; 
             font-weight: 900 !important;
             line-height: 1.2 !important;
@@ -162,11 +162,11 @@
             margin-top: 6px;
         }
 
-        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
+        /* 学生モード（通常時）はファイル選択ボタン自体を完全に隠す */
         #excel-file-picker {
             display: none !important;
         }
-        /* 🔓 教師モード（ON時）だけ、ファイル選択ボタンを画面に出現させる */
+        /* 教師モード（ON時）だけ、ファイル選択ボタンを画面に出現させる */
         body.teacher-mode-active #excel-file-picker {
             display: inline-block !important;
             margin-top: 5px !important;
@@ -187,7 +187,7 @@
             }
         }
 
-        /* --- 以下、元の通常スタイル（一切変更なし・完全維持） --- */
+        /* --- 以下、元の通常スタイル（完全維持） --- */
         #action-area button {
             padding: 24px 16px !important;
             border-radius: 14px !important;
@@ -620,8 +620,9 @@
     <audio id="audio-cheer" src="se/cheer.mp3" preload="auto"></audio>
 
     <script>
+        // 👑 修正：無限ループの原因だった "hachii" のタイポを "はち" に正確に修正
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["hachii","you","da","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["ka"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["はち","よう","だ","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["ka"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -669,7 +670,6 @@
         let isMuted = false;
         let isTeacherMode = false; 
 
-        // モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
         function resetButtonsForCurrentMode(isAnswerVisible) {
             document.getElementById('show-answer-btn').classList.toggle('hidden', isAnswerVisible);
             
@@ -681,6 +681,16 @@
                 document.getElementById('teacher-control-btns').classList.add('hidden');
                 document.getElementById('student-next-btn').classList.add('hidden');
                 document.getElementById('student-judge-btns').classList.toggle('hidden', !isAnswerVisible);
+            }
+        }
+
+        // 👑 修正：進行カウンターに文字を正確に代入する統合関数を新設
+        function updateTeacherCounter() {
+            const counterEl = document.getElementById('teacher-counter');
+            if (isTeacherMode) {
+                counterEl.textContent = `問題: ${currentIdx}/${maxQuestions}`;
+            } else {
+                counterEl.textContent = "";
             }
         }
 
@@ -705,7 +715,6 @@
             }
         }
 
-        // 手動ファイルピッカーからの読み込み
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -724,7 +733,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // 自動ロード・手動選択で完全に共有される統合データ解析ロジック
         function processWorkbook(workbook) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
@@ -1018,7 +1026,7 @@
                             finalHtml += `<ruby>${char}<rt class="target-blind">${rText}</rt></ruby>`;
                         } 
                         else {
-                            const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
+                            const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
                             const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
 
                             if (isUnlearned && rText && rText !== " ") {
@@ -1222,7 +1230,7 @@
             document.getElementById('instruction-content').innerText = `${kData['教材名']} 【 ${kData['課']}-${kData['セクション']} 】`;
             
             const qKanji = kData['語彙_漢字'] || "";
-            const qHira = kData['語彙_ひらがな'] || "";
+            const qHira = kData['語彙_ひラグな'] || kData['語彙_ひらがな'] || "";
             const qProgRead = kData['読み（プログラム用）'] || ""; 
             const qTargetKanji = kData['学習漢字'] || "";          
             const tbName = kData['教材名'] || "";
@@ -1242,10 +1250,10 @@
             
             document.getElementById('display-answer-word').innerText = qHira;
 
-            // 以前の仕様に復元：次の問題にいくタイミングで直接ボタン状態をリセット
+            // 👑 修正：毎問題の切り替え時に、左上の問題数表示を確実にアップデート
             resetButtonsForCurrentMode(false);
             updateScoreBoard();
-            updateTeacherCounter(); // 👑 復元：左上カウンターの表示を毎問題アップデート
+            updateTeacherCounter(); 
         }
 
         function showAnswer() {
@@ -1253,11 +1261,9 @@
             answerBlock.classList.remove('hidden');
             answerBlock.classList.remove('invisible'); 
             
-            // 以前の仕様に復元：答えを表示した直後に直接ボタン状態をリセット
             resetButtonsForCurrentMode(true);
         }
 
-        // 以前の仕様に復元：元の100%安定していたシンプルなボタン隠し処理
         function handleStudentJudge(isCorrect) {
             document.getElementById('student-judge-btns').classList.add('hidden');
             document.getElementById('student-next-btn').classList.remove('hidden');

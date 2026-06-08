@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.0</title>
-    <meta name="apple-mobile-web-app-title" content="漢字ドリル">
+    <title>漢字ドリル - v1.0.4_student</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
+    <link class="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -24,43 +23,150 @@
             --card-font-size: 2.8rem;
         }
 
-        /* 👑 教師モード（プロジェクター投影用）の超高コントラスト・巨大化スキン */
+        /* 👨‍🏫 【教師モード専用】クイズ（ドリル）画面のみをターゲットにした高コントラストスキン */
+        body.teacher-mode-active #drill-screen {
+            --bg-color: #ffffff !important;
+            --card-bg: #ffffff !important;
+            --text-main: #000000 !important;
+            --text-sub: #000000 !important;
+            --primary: #000000 !important;
+            --accent: #000000 !important; 
+        }
+        
         body.teacher-mode-active {
-            --bg-color: #000000 !important;
-            --card-bg: #000000 !important;
-            --text-main: #ffffff !important;
-            --text-sub: #aaaaaa !important;
-            --primary: #00bbff !important;
-            --accent: #ffff00 !important; 
-            --card-font-size: 5.0rem !important; 
+            transition: background 0.2s, color 0.2s;
         }
-        body.teacher-mode-active .card {
-            border: 3px dashed #555 !important;
+        body.teacher-mode-active:has(#drill-screen:not(.hidden)) {
+            background-color: #ffffff !important;
+        }
+
+        /* 教師モード時のカード・表示レイアウトの完全位置固定ロジック */
+        body.teacher-mode-active #drill-screen .card {
+            border: none !important;
             box-shadow: none !important;
-        }
-        body.teacher-mode-active #display-word-area rt {
-            font-size: 1.5rem !important; 
-        }
-
-        /* 1. 通常（学生）モードのメイン操作ボタンだけを肉厚にする */
-        #action-area button {
-            padding: 24px 16px !important;
-            border-radius: 14px !important;
-        }
-
-        /* 2. 教師モードのメイン操作ボタンだけをさらに肉厚にする */
-        body.teacher-mode-active #action-area button {
-            padding: 28px 16px !important;
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin-bottom: 0 !important;
+            
+            /* 画面全体の縦幅から固定ボタン領域を引いた全画面表示 */
+            height: calc(100vh - 160px) !important;
+            min-height: auto !important; 
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: stretch !important;
+            box-sizing: border-box;
         }
 
-        /* 2. カードの縦幅を最初から「答えの分」まで大きく広げて固定する */
-        body.teacher-mode-active .card {
-            min-height: 360px !important;
-            justify-content: flex-start !important; 
-            padding-top: 60px !important;           
+        /* 問題（上半分50%）と 答え（下半分50%）のエリアを最初から厳密に等分固定 */
+        body.teacher-mode-active #drill-screen .card-question-area,
+        body.teacher-mode-active #drill-screen .card-answer-area {
+            height: 50% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important; 
+            align-items: center !important;     
+            box-sizing: border-box;
+            padding: 10px 20px !important;
+            overflow: hidden;
         }
 
-        /* タブレット横持ち（横画面）の時は、縦幅（360px）を維持したまま、横幅だけを画面いっぱいに広げる */
+        /* 教材情報（○課）の位置調整 */
+        body.teacher-mode-active #drill-screen #display-target-info {
+            font-size: 1.5rem !important;
+            color: #666666 !important;
+            margin-bottom: 10px !important;
+            position: absolute;
+            top: 15px;
+            right: 20px;
+        }
+
+        /* 問題テキストの超巨大化（vh単位でプロジェクター限界まで拡大） */
+        body.teacher-mode-active #drill-screen #display-word-area {
+            font-size: 18vh !important; 
+            line-height: 1.2 !important;
+            color: #000000 !important;
+            font-weight: 900 !important;
+        }
+
+        /* 教師モード時のルビ（ふりがな）サイズの大幅引き上げ */
+        body.teacher-mode-active #drill-screen #display-word-area rt {
+            font-size: 3.5vh !important; 
+            font-weight: bold !important;
+            color: #000000 !important;
+            padding-bottom: 8px !important;
+        }
+
+        /* 教師モード専用の進行カウンター（左上固定） */
+        #teacher-counter {
+            display: none;
+        }
+        body.teacher-mode-active #drill-screen #teacher-counter {
+            display: block;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 2.0rem;
+            font-weight: bold;
+            color: #000000;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #000000;
+            border-radius: 6px;
+            padding: 4px 12px;
+        }
+
+        /* 答えエリアの境界線と文字サイズの超巨大化 */
+        body.teacher-mode-active #drill-screen #display-answer-block {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            border-top: 4px solid #000000 !important; 
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        body.teacher-mode-active #drill-screen #display-answer-word { 
+            font-size: 14vh !important; 
+            color: #000000 !important; 
+            font-weight: 900 !important;
+            line-height: 1.2 !important;
+        }
+
+        /* アクションエリア全体の固定化 */
+        body.teacher-mode-active #drill-screen #action-area {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 100% !important;
+            max-width: 600px !important;
+            background: #ffffff !important;
+            border-top: 3px solid #000000 !important;
+            padding: 12px 15px env(safe-area-inset-bottom) 15px !important;
+            box-sizing: border-box;
+            z-index: 99;
+        }
+        
+        /* 教師モード時の底面ボタンのスタイル調整 */
+        body.teacher-mode-active #drill-screen #action-area button {
+            padding: 14px 16px !important; 
+            font-size: 1.3rem !important;
+            border: 2px solid #000000 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+        }
+        body.teacher-mode-active #drill-screen #action-area button:active {
+            background: #e0e0e0 !important;
+        }
+        
+        body.teacher-mode-active #drill-screen .quit-btn-wrapper {
+            margin-top: 6px;
+        }
+
+        /* 横画面（landscape）時の最大幅設定を上書き・最適化 */
         @media (orientation: landscape) {
             body.teacher-mode-active #setup-screen, 
             body.teacher-mode-active #drill-screen, 
@@ -70,16 +176,25 @@
             body.teacher-mode-active .card {
                 width: 100% !important; 
             }
+            body.teacher-mode-active #drill-screen #action-area {
+                max-width: 95% !important; 
+            }
         }
 
-        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
-        #excel-file-picker {
-            display: none !important;
+        /* --- 以下、元の通常スタイル（一切変更なし・完全維持） --- */
+        #action-area button {
+            padding: 24px 16px !important;
+            border-radius: 14px !important;
         }
-        /* 🔓 教師モード（ON時）だけ、ファイル選択ボタンを画面に出現させる */
-        body.teacher-mode-active #excel-file-picker {
-            display: inline-block !important;
-            margin-top: 5px !important;
+
+        body.teacher-mode-active #action-area button {
+            padding: 28px 16px !important;
+        }
+
+        body.teacher-mode-active .card {
+            min-height: 360px !important;
+            justify-content: flex-start !important; 
+            padding-top: 60px !important;           
         }
 
         body { 
@@ -106,8 +221,8 @@
             box-sizing: border-box;
         }
         .hidden { display: none !important; }
+        .invisible { visibility: hidden !important; display: block !important; }
 
-        /* モード切替グローバルスイッチ */
         .mode-toggle-header {
             width: 100%;
             max-width: 600px;
@@ -227,16 +342,15 @@
             margin-bottom: 10px;
         }
         .btn-small {
-            padding: 8px 12px;
+            padding: 6px 12px;
             font-size: 0.85rem;
-            border-radius: 8px;
-            width: 100%;
+            border-radius: 6px;
+            width: auto;
             margin-bottom: 0;
             background: #3a3a44;
             color: var(--text-main);
             border: 1px solid #555;
             cursor: pointer;
-            line-height: 1.4;
         }
 
         .nested-checkbox-area {
@@ -306,9 +420,9 @@
         .btn-mark { display: block; font-size: 1.4rem; }
 
         .teacher-control-container {
-            display: flex; 
-            gap: 12px; 
-            width: 100%; 
+            display: flex;
+            gap: 12px;
+            width: 100%;
             box-sizing: border-box;
         }
         
@@ -346,8 +460,7 @@
         
         #display-answer-block { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #444; width: 100%; }
         #display-answer-word { font-size: 2.8rem; font-weight: bold; color: #ffeb3b; line-height: 1.5; letter-spacing: 0.02em; word-break: break-all; }
-        body.teacher-mode-active #display-answer-word { font-size: 4.0rem !important; color: #ffff00 !important; }
-
+        
         .file-status { font-size: 0.9rem; color: #888; margin-top: 5px; text-align: center; font-family: sans-serif; font-weight: bold; }
         #wrong-list-area { width: 100%; height: 120px; background: #2a2a32; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 0.9rem; margin-bottom: 10px; text-align: left; font-family: sans-serif; }
     </style>
@@ -365,23 +478,23 @@
         <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-family: sans-serif;">漢字ドリル</h2>
         <p style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 25px; font-family: sans-serif;">よみかたの れんしゅう アプリ</p>
         
-        <div class="form-group" style="text-align: center; padding: 15px;">
-            <input type="file" id="excel-file-picker" accept=".xlsx, .xls" style="font-size: 10pt; color: #fff; margin-bottom: 10px;">
-            <div id="file-status-text" class="file-status" style="color: #ffb74d;">📅 エクセルファイルを えらんでください</div>
+        <div class="form-group" style="text-align: center; padding: 15px; display: none;">
+            <input type="file" id="excel-file-picker" accept=".xlsx, .xls">
         </div>
+        <div id="file-status-text" class="file-status" style="color: #ffb74d; margin-bottom: 15px;">🔄 データを よみこんでいます...</div>
 
         <div class="form-group">
-            <label>📖 練習する教材</label>
+            <label>📖 練習（れんしゅう）する 教材（きょうざい）</label>
             <select id="textbook-select" onchange="updateRangeUI()">
                 <option value="">データを よみこんでください</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label>🎯 練習する課・セクション</label>
+            <label>🎯 練習（れんしゅう）する 課・セクション（ピンポイント選択）</label>
             <div class="select-toggle-area">
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択<br>(ぜんせんたく)</button>
-                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除<br>(ぜんかいじょ)</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(true)">全選択（ぜんせんたく）</button>
+                <button type="button" class="btn-small" onclick="toggleAllCheckboxes(false)">全解除（ぜんかいじょ）</button>
             </div>
             <div id="nested-checkbox-area" class="nested-checkbox-area">
                 <span style="color:#666; font-size:0.9rem;">データを よみこむまで お待ちください</span>
@@ -419,6 +532,8 @@
     </div>
 
     <div id="drill-screen" class="hidden">
+        <div id="teacher-counter"></div>
+
         <div class="score-board" id="student-score-board">
             <div class="score-info">
                 <div class="score-item">問題:<span id="score-current-idx" class="score-num">0</span>/<span id="score-max-questions" class="score-num">0</span></div>
@@ -429,14 +544,17 @@
         </div>
 
         <div class="card">
-            <div id="display-target-info">
-                <span class="arrow-accent">➔</span> <span id="instruction-content">【 Loading 】</span>
+            <div class="card-question-area">
+                <div id="display-target-info">
+                    <span class="arrow-accent">➔</span> <span id="instruction-content">【 Loading 】</span>
+                </div>
+                <div id="display-word-area"></div>
             </div>
             
-            <div id="display-word-area"></div>
-            
-            <div id="display-answer-block" class="hidden">
-                <div id="display-answer-word"></div>
+            <div class="card-answer-area">
+                <div id="display-answer-block" class="hidden">
+                    <div id="display-answer-word"></div>
+                </div>
             </div>
         </div>
 
@@ -459,9 +577,11 @@
                 <button id="btn-teacher-back" class="btn-secondary" style="flex: 1;" onclick="handleTeacherBack()">◀ もどる</button>
                 <button id="btn-teacher-next" class="btn-primary" style="flex: 2;" onclick="handleTeacherNext()">つぎへ ▶</button>
             </div>
-        </div>
 
-        <button onclick="backToSetup()" class="btn-secondary" style="margin-top: 10px; padding: 10px; font-size: 0.9rem;">やめる</button>
+            <div class="quit-btn-wrapper">
+                <button onclick="backToSetup()" class="btn-secondary" style="margin-top: 10px; padding: 10px; font-size: 0.9rem; margin-bottom: 0;">やめる</button>
+            </div>
+        </div>
     </div>
 
     <div id="result-screen" class="hidden">
@@ -497,7 +617,7 @@
 
     <script>
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["hachii","you","da","ya"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["がく","まな"],"校":["こう"],"生":["しょう","せい","なま","う","い"],"一":["いち","いつ","ひと"],"日":["にち","じつ","び","ひ","か"],"中":["ちゅう","じゅう","なか"],"八":["はち","よう","や"],"本":["ほん","ぼん","ぽん","もと"],"韓":["かん"],"国":["こく","くに"],"専":["せん"],"門":["もん","かど"],"先":["せん","さき"],"運":["うん","はこ"],"転":["てん","ころ"],"手":["しゅ","て"],"教":["きょう","おし"],"科":["か"],"書":["しょ","が","か"],"市":["し"],"長":["ちょう","なが"],"女":["じょ","にょ","おんな"],"性":["せい","しょう"],"消":["しょう"],"防":["ぼう"],"車":["しゃ","くるま"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -545,22 +665,51 @@
         let isMuted = false;
         let isTeacherMode = false; 
 
+        // 💡 学生用（index）の自動ファイル読み込み関数
+        async function autoLoadExcelFromServer() {
+            const fileName = "kanji_data.xlsx"; // 同一ディレクトリ内のExcelを想定
+            try {
+                const response = await fetch(fileName);
+                if (!response.ok) throw new Error("Network response was not ok");
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                allData = XLSX.utils.sheet_to_json(worksheet);
+                
+                if (allData.length > 0) {
+                    analyzeExcelStructure();
+                    buildTextbookKanjiMap(); 
+                    showFileStatus(true, "準備（じゅんび）が できました！");
+                } else {
+                    showFileStatus(false, "データが 空っぽです");
+                }
+            } catch (err) {
+                console.error(err);
+                showFileStatus(false, "エクセルデータの自動よみこみに 失敗しました。");
+            }
+        }
+        // 画面立ち上げ時に自動実行
+        autoLoadExcelFromServer();
+
         function toggleTeacherMode(enabled) {
             isTeacherMode = enabled;
-            const switchEl = document.getElementById('global-teacher-switch');
-            if (switchEl) switchEl.checked = enabled;
-
             if (enabled) {
                 document.body.classList.add('teacher-mode-active');
             } else {
                 document.body.classList.remove('teacher-mode-active');
             }
             if (!document.getElementById('drill-screen').classList.contains('hidden')) {
-                const answerVisible = !document.getElementById('display-answer-block').classList.contains('hidden');
+                const answerVisible = !document.getElementById('display-answer-block').classList.contains('hidden') && 
+                                      !document.getElementById('display-answer-block').classList.contains('invisible');
                 updateControlButtonsVisibility(answerVisible);
+                updateTeacherCounter(); 
             }
         }
 
+        // 手動選択時のリスナーも互換性のために維持
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -570,7 +719,18 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    processWorkbook(workbook);
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    allData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (allData.length > 0) {
+                        analyzeExcelStructure();
+                        buildTextbookKanjiMap(); 
+                        showFileStatus(true, "準備（じゅんび）が できました！");
+                    } else {
+                        showFileStatus(false, "データが 空っぽです");
+                    }
                 } catch (err) {
                     console.error(err);
                     showFileStatus(false, "ファイルの よみこみに 失敗しました。");
@@ -578,21 +738,6 @@
             };
             reader.readAsArrayBuffer(file);
         });
-
-        function processWorkbook(workbook) {
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            
-            allData = XLSX.utils.sheet_to_json(worksheet);
-            
-            if (allData.length > 0) {
-                analyzeExcelStructure();
-                buildTextbookKanjiMap(); 
-                showFileStatus(true, "準備（じゅんび）が できました！");
-            } else {
-                showFileStatus(false, "データが 空っぽです");
-            }
-        }
 
         function showFileStatus(success, message = "") {
             const statusText = document.getElementById('file-status-text');
@@ -742,9 +887,8 @@
             if (isMuted) return;
             const audio = document.getElementById(audioId);
             if (audio) {
-                audio.prevTime = 0; 
                 audio.currentTime = 0;
-                audio.play().catch((e)=>{ console.warn("Audio play blocked:", e); });
+                audio.play().catch(()=>{});
             }
         }
 
@@ -828,6 +972,8 @@
             wrongObjectsPool = [];
             wrongListText = [];
 
+            toggleTeacherMode(document.getElementById('global-teacher-switch').checked);
+
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.add('hidden');
             document.getElementById('drill-screen').classList.remove('hidden');
@@ -873,7 +1019,7 @@
                             const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
                             const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
 
-                            if (isUnlearned && rText && rText !== "　") {
+                            if (isUnlearned && rText && rText !== " ") {
                                 finalHtml += `<ruby>${char}<rt>${rText}</rt></ruby>`;
                             } else {
                                 finalHtml += char;
@@ -1016,7 +1162,7 @@
                     if (item.type === "kana" || item.type === "number") {
                         finalHtml += item.char; 
                     } else if (item.type === "target") {
-                        const rText = item.reading ? item.reading : "　";
+                        const rText = item.reading ? item.reading : " ";
                         finalHtml += `<ruby>${item.char}<rt class="target-blind">${rText}</rt></ruby>`;
                     } else {
                         const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
@@ -1044,7 +1190,7 @@
                 let processedHira = rawHiraStr;
                 targetReadings.forEach(read => {
                     if (read) {
-                        processedHira = processedHira.replace(read, "　".repeat(read.length));
+                        processedHira = processedHira.replace(read, " ".repeat(read.length));
                     }
                 });
 
@@ -1053,6 +1199,15 @@
                 } else {
                     return kanjiStr;
                 }
+            }
+        }
+
+        function updateTeacherCounter() {
+            const counterEl = document.getElementById('teacher-counter');
+            if (isTeacherMode) {
+                counterEl.textContent = `問題: ${currentIdx}/${maxQuestions}`;
+            } else {
+                counterEl.textContent = "";
             }
         }
 
@@ -1082,15 +1237,26 @@
 
             document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
 
-            document.getElementById('display-answer-block').classList.add('hidden');
+            const answerBlock = document.getElementById('display-answer-block');
+            if (isTeacherMode) {
+                answerBlock.classList.remove('hidden');
+                answerBlock.classList.add('invisible');
+            } else {
+                answerBlock.classList.add('hidden');
+                answerBlock.classList.remove('invisible');
+            }
+            
             document.getElementById('display-answer-word').innerText = qHira;
 
             updateControlButtonsVisibility(false);
             updateScoreBoard();
+            updateTeacherCounter(); 
         }
 
         function showAnswer() {
-            document.getElementById('display-answer-block').classList.remove('hidden');
+            const answerBlock = document.getElementById('display-answer-block');
+            answerBlock.classList.remove('hidden');
+            answerBlock.classList.remove('invisible');
             updateControlButtonsVisibility(true);
         }
 
@@ -1122,7 +1288,6 @@
                     studentJudgeBtns.classList.add('hidden');
                     studentNextBtn.classList.add('hidden');
                 } else {
-                    showAnswerBtn.mathbf = "none";
                     showAnswerBtn.classList.add('hidden');
                     studentJudgeBtns.classList.remove('hidden');
                     studentNextBtn.classList.add('hidden');
@@ -1211,9 +1376,11 @@
         });
 
         function backToSetup() {
+            document.body.classList.remove('teacher-mode-active'); 
             document.getElementById('drill-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('teacher-counter').textContent = "";
         }
 
         document.getElementById('show-answer-btn').addEventListener('click', showAnswer);
@@ -1221,7 +1388,9 @@
         window.addEventListener('keydown', (e) => {
             if (document.getElementById('drill-screen').classList.contains('hidden')) return;
 
-            if (!document.getElementById('show-answer-btn').classList.contains('hidden')) {
+            const answerBtnVisible = !document.getElementById('show-answer-btn').classList.contains('hidden');
+
+            if (answerBtnVisible) {
                 if (e.code === 'Space' || e.code === 'Enter') {
                     showAnswer();
                     e.preventDefault();
@@ -1255,29 +1424,6 @@
                     }
                 }
             }
-        });
-
-        // 🚀 アプリ起動時の初期化（Excel自動読み込み機能）
-        window.addEventListener('DOMContentLoaded', () => {
-            toggleTeacherMode(false);
-            backToSetup();
-
-            // 📂 同じフォルダ内にある「kanji.xlsx」を自動的に読み込む
-            fetch('kanji.xlsx')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('自動読み込み用の kanji.xlsx が見つかりません。');
-                    }
-                    return response.arrayBuffer();
-                })
-                .then(data => {
-                    const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
-                    processWorkbook(workbook);
-                    console.log('kanji.xlsx を自動的に読み込みました。');
-                })
-                .catch(error => {
-                    console.warn(error.message);
-                });
         });
     </script>
 </body>

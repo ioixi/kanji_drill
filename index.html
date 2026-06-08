@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.8_student</title>
+    <title>漢字ドリル - v1.0.9_student</title>
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,6 +12,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        /* 🎨 Google Fonts から視認性の高い「Noto Sans JP」を読み込み */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
         :root {
             --bg-color: #121214;
             --card-bg: #1e1e24;
@@ -131,7 +134,7 @@
             line-height: 1.2 !important;
         }
 
-        /* 操作エリア全体の固定化（iPadのホームバーとの衝突を避けるため少し浮かせる） */
+        /* 👑 修正：操作エリア全体の固定化（変な枠線と影を消去し、白背景に完全同化） */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
             bottom: 12px !important;
@@ -140,12 +143,12 @@
             width: 92% !important;
             max-width: 600px !important;
             background: #ffffff !important;
-            border: 3px solid #000000 !important;
-            border-radius: 16px;
+            border: none !important; /* 外枠を消去 */
+            border-radius: 0px !important;
             padding: 12px 15px env(safe-area-inset-bottom) 15px !important;
             box-sizing: border-box;
             z-index: 999;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: none !important; /* 浮き出た影を消去 */
         }
         
         /* 教師モード時の底面ボタンのスタイル調整 */
@@ -208,7 +211,8 @@
         }
 
         body { 
-            font-family: "UD Digi Kyokasho NK-B", "UD デジタル教科書体 NK-B", "UD Digi Kyokasho N-B", "UD デジタル教科書体 N-B", "UD Digi Kyokasho NK-R", "UD デジタル教科書体 NK-R", "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Helvetica Neue", Arial, sans-serif; 
+            /* 👑 修正：フォントファミリーに Noto Sans JP を追加し、OS標準ゴシックへフォールバックする構成に刷新 */
+            font-family: 'Noto Sans JP', '-apple-system', 'BlinkMacSystemFont', 'Hiragino Kaku Gothic ProN', 'Hiragino Maru Gothic ProN', Arial, sans-serif; 
             background: var(--bg-color); 
             color: var(--text-main);
             display: flex; 
@@ -317,7 +321,6 @@
         select {
             width: 100%; padding: 12px; background: #2a2a32; border: 1px solid #444; 
             color: #fff; border-radius: 8px; font-size: 1rem; box-sizing: border-box;
-            font-family: sans-serif;
         }
         
         .switch-container {
@@ -411,7 +414,6 @@
             font-size: 1.15rem; 
             font-weight: bold; cursor: pointer; 
             transition: transform 0.1s, opacity 0.2s; margin-bottom: 12px;
-            font-family: sans-serif;
             -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
         }
@@ -437,7 +439,7 @@
             box-sizing: border-box;
         }
         
-        #display-target-info { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; font-family: sans-serif; color: var(--text-sub); }
+        #display-target-info { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: var(--text-sub); }
         .arrow-accent { color: var(--accent); }
 
         #display-word-area { 
@@ -483,8 +485,8 @@
     </div>
 
     <div id="setup-screen">
-        <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-family: sans-serif;">漢字ドリル</h2>
-        <p style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 25px; font-family: sans-serif;">よみかたの れんしゅう アプリ</p>
+        <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 1.8rem;">漢字ドリル</h2>
+        <p style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 25px;">よみかたの れんしゅう アプリ</p>
         
         <div class="form-group" style="text-align: center; padding: 15px;">
             <input type="file" id="excel-file-picker" accept=".xlsx, .xls" style="font-size: 10pt; color: #fff; margin-bottom: 10px;">
@@ -598,8 +600,8 @@
         </div>
         
         <div class="card">
-            <h2 style="color: var(--accent); margin-top: 0; font-family: sans-serif;">おわりました！🎉</h2>
-            <p style="font-size: 1.4rem; margin: 20px 0; font-family: sans-serif;">あなたの てんすう: <span id="result-score" style="font-weight: bold; color: #fff; font-size: 2rem;">0</span></p>
+            <h2 style="color: var(--accent); margin-top: 0;">おわりました！🎉</h2>
+            <p style="font-size: 1.4rem; margin: 20px 0;">あなたの てんすう: <span id="result-score" style="font-weight: bold; color: #fff; font-size: 2rem;">0</span></p>
             <p id="result-comment" style="color: #aaa;"></p>
         </div>
 
@@ -625,7 +627,7 @@
 
     <script>
         let KANJI_MINI_DICT = {
-            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["はち","よう","だ","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["ka"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
+            "何":["なん","なに"],"歳":["さい","せい"],"高":["こう","たか"],"学":["gaku","mana"],"校":["kou"],"生":["shou","sei","nama","u","i"],"一":["ichi","itsu","hito"],"日":["nichi","jitsu","び","ひ","か"],"中":["chuu","juu","naka"],"八":["はち","よう","だ","ya"],"本":["hon","bon","pon","moto"],"韓":["kan"],"国":["koku","kuni"],"専":["せん"],"門":["mon","kado"],"先":["せん","saki"],"運":["うん","hako"],"転":["ten","koro"],"手":["shu","te"],"教":["kyou","oshi"],"科":["か"],"書":["sho","ga","ka"],"市":["shi"],"長":["chou","naga"],"女":["jo","nyo","onna"],"性":["sei","shou"],"消":["shou"],"防":["bou"],"車":["sha","kuruma"]
         };
 
         const DICT_URL = "https://raw.githubusercontent.com/mandelbrot-project/kanji-json/master/kanji.json";
@@ -1131,7 +1133,6 @@
 
                     if (nextTargetChar) {
                         if (/[\u3040-\u309F\u30A0-\u30FFー〜]/.test(nextTargetChar)) {
-                            // 👑 修正：存在しない nextNormalChar から 正しい nextTargetChar に修正
                             let nextPos = rawHiraStr.indexOf(nextTargetChar, hiraIdx);
                             if (nextPos !== -1) chunkLen = nextPos - hiraIdx;
                         } else if (targetKanji.includes(nextTargetChar)) {
@@ -1159,7 +1160,6 @@
                         }
                     }
 
-                    // 👑 修正：辞書未登録の漢字処理でインデックスが一切進まなくなる無限ループをガード
                     if (chunkLen <= 0) {
                         chunkLen = 1;
                     }

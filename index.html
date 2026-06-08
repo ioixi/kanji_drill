@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字ドリル - v1.0.4_student</title>
+    <title>漢字ドリル - v1.0.5_student</title>
     <meta name="apple-mobile-web-app-title" content="漢字ドリル">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,7 +24,7 @@
             --card-font-size: 2.8rem;
         }
 
-        /* 👨‍🏫 【教師モード専用】クイズ（ドリル）画面のみをターゲットにした高コントラストスキン */
+        /* 👨‍🏫 【教師モード専用】クイズ画面のみをターゲットにした高コントラストスキン */
         body.teacher-mode-active #drill-screen {
             --bg-color: #ffffff !important;
             --card-bg: #ffffff !important;
@@ -135,7 +135,7 @@
             line-height: 1.2 !important;
         }
 
-        /* アクションエリア全体の固定化 */
+        /* 👑 CSSの力だけで操作エリア全体を画面底面に完全固定（JSの手出しを不要にする） */
         body.teacher-mode-active #drill-screen #action-area {
             position: fixed !important;
             bottom: 0 !important;
@@ -167,7 +167,7 @@
             margin-top: 6px;
         }
 
-        /* 🔒 学生モード（通常時）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
+        /* 🔒 通常時（学生モード）はファイル選択ボタン自体を完全に隠す（ステータス文字は残す） */
         #excel-file-picker {
             display: none !important;
         }
@@ -177,7 +177,7 @@
             margin-top: 5px !important;
         }
 
-        /* 横画面（landscape）時の最大幅設定を上書き・最適化 */
+        /* 横画面（landscape）時の最大幅設定 */
         @media (orientation: landscape) {
             body.teacher-mode-active #setup-screen, 
             body.teacher-mode-active #drill-screen, 
@@ -192,7 +192,7 @@
             }
         }
 
-        /* --- 以下、元の通常スタイル（一切変更なし・完全維持） --- */
+        /* --- 以下、元の通常スタイル --- */
         #action-area button {
             padding: 24px 16px !important;
             border-radius: 14px !important;
@@ -681,18 +681,21 @@
 
             if (enabled) {
                 document.body.classList.add('teacher-mode-active');
+                document.getElementById('student-score-board').style.display = "none";
             } else {
                 document.body.classList.remove('teacher-mode-active');
+                document.getElementById('student-score-board').style.display = "flex";
             }
+            
+            // ドリル画面起動中なら、ボタン表示を正しくリセット
             if (!document.getElementById('drill-screen').classList.contains('hidden')) {
                 const answerVisible = !document.getElementById('display-answer-block').classList.contains('hidden') && 
                                       !document.getElementById('display-answer-block').classList.contains('invisible');
-                updateControlButtonsVisibility(answerVisible);
-                updateTeacherCounter(); 
+                resetButtonsForCurrentMode(answerVisible);
+                updateTeacherCounter();
             }
         }
 
-        // 手動ファイルピッカーからの読み込み
         document.getElementById('excel-file-picker').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -711,7 +714,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // 📊 自動ロード・手動選択で完全に共有される統合データ解析ロジック
         function processWorkbook(workbook) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
@@ -1154,7 +1156,7 @@
                         const rText = item.reading ? item.reading : " ";
                         finalHtml += `<ruby>${item.char}<rt class="target-blind">${rText}</rt></ruby>`;
                     } else {
-                        const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][char] : null;
+                        const kScore = textbookKanjiMap[textbookName] ? textbookKanjiMap[textbookName][item.char] : null;
                         const isUnlearned = (!kScore || kScore > currentQuestion.maxSelectedScore);
 
                         if (isUnlearned && item.reading) {
@@ -1200,6 +1202,21 @@
             }
         }
 
+        // 👑 復元：モードに応じてすべてのコンテナの表示・非表示の初期状態を確実にセットする
+        function resetButtonsForCurrentMode(isAnswerVisible) {
+            document.getElementById('show-answer-btn').classList.toggle('hidden', isAnswerVisible);
+            
+            if (isTeacherMode) {
+                document.getElementById('student-judge-btns').classList.add('hidden');
+                document.getElementById('student-next-btn').classList.add('hidden');
+                document.getElementById('teacher-control-btns').classList.toggle('hidden', !isAnswerVisible);
+            } else {
+                document.getElementById('teacher-control-btns').classList.add('hidden');
+                document.getElementById('student-next-btn').classList.add('hidden');
+                document.getElementById('student-judge-btns').classList.toggle('hidden', !isAnswerVisible);
+            }
+        }
+
         function nextQuestion() {
             if (currentIdx >= maxQuestions) {
                 if (isTeacherMode) {
@@ -1226,7 +1243,7 @@
 
             document.getElementById('display-word-area').innerHTML = buildDynamicRuby(qKanji, qHira, qProgRead, qTargetKanji, tbName, qExceptionRead);
 
-            // 教師モード時のガタつき防止のため、枠だけ残して透明化(invisible)にする
+            // 教師モード時のガタつき防止
             const answerBlock = document.getElementById('display-answer-block');
             if (isTeacherMode) {
                 answerBlock.classList.remove('hidden');
@@ -1238,7 +1255,8 @@
             
             document.getElementById('display-answer-word').innerText = qHira;
 
-            updateControlButtonsVisibility(false);
+            // 👑 復元：JSを極限までシンプルにするため、次の問題にいくタイミングで初期化
+            resetButtonsForCurrentMode(false);
             updateScoreBoard();
             updateTeacherCounter(); 
         }
@@ -1247,44 +1265,12 @@
             const answerBlock = document.getElementById('display-answer-block');
             answerBlock.classList.remove('hidden');
             answerBlock.classList.remove('invisible'); 
-            updateControlButtonsVisibility(true);
+            
+            // 👑 復元：答えを表示した際の状態にリセット
+            resetButtonsForCurrentMode(true);
         }
 
-        function updateControlButtonsVisibility(isAnswerVisible) {
-            const scoreBoard = document.getElementById('student-score-board');
-            const showAnswerBtn = document.getElementById('show-answer-btn');
-            const studentJudgeBtns = document.getElementById('student-judge-btns');
-            const studentNextBtn = document.getElementById('student-next-btn');
-            const teacherControlBtns = document.getElementById('teacher-control-btns');
-
-            if (isTeacherMode) {
-                scoreBoard.style.display = "none";
-                studentJudgeBtns.classList.add('hidden');
-                studentNextBtn.classList.add('hidden');
-
-                if (!isAnswerVisible) {
-                    showAnswerBtn.classList.remove('hidden');
-                    teacherControlBtns.classList.add('hidden');
-                } else {
-                    showAnswerBtn.classList.add('hidden');
-                    teacherControlBtns.classList.remove('hidden');
-                }
-            } else {
-                scoreBoard.style.display = "flex";
-                teacherControlBtns.classList.add('hidden');
-
-                if (!isAnswerVisible) {
-                    showAnswerBtn.classList.remove('hidden');
-                    studentJudgeBtns.classList.add('hidden');
-                    studentNextBtn.classList.add('hidden');
-                } else {
-                    showAnswerBtn.classList.add('hidden');
-                    studentJudgeBtns.classList.remove('hidden');
-                    studentNextBtn.classList.add('hidden');
-                }
-            }
-        }
-
+        // 👑 復元：以前の100%安定していたシンプルなボタン隠しロジックに完全差し替え
         function handleStudentJudge(isCorrect) {
             document.getElementById('student-judge-btns').classList.add('hidden');
             document.getElementById('student-next-btn').classList.remove('hidden');
@@ -1416,12 +1402,11 @@
             }
         });
 
-        // 🚀 【完全復元】アプリ起動時の初期化および「kanji.xlsx」の自動ロード処理
+        // アプリ起動時の初期化および「kanji.xlsx」の自動ロード処理
         window.addEventListener('DOMContentLoaded', () => {
             toggleTeacherMode(false);
             backToSetup();
 
-            // 同じ階層にある「kanji.xlsx」をサーバー経由で自動フェッチ
             fetch('kanji.xlsx')
                 .then(response => {
                     if (!response.ok) {
@@ -1430,7 +1415,6 @@
                     return response.arrayBuffer();
                 })
                 .then(data => {
-                    // データの展開と共通ロジック「processWorkbook」への引き渡し
                     const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
                     processWorkbook(workbook);
                     console.log('✓ kanji.xlsx を自動的にロードし解析しました。');
